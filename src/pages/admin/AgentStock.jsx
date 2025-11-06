@@ -32,6 +32,17 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { toast } from "sonner";
 import { Edit, Trash2, Plus, FileDown, Receipt } from "lucide-react";
 import jsPDF from "jspdf";
@@ -139,7 +150,7 @@ const AgentStock = () => {
 
   // 🔴 Delete Stock
   const handleDelete = async (agentId, cylinderId) => {
-    if (!window.confirm("Are you sure you want to delete this stock?")) return;
+    // if (!window.confirm("Are you sure you want to delete this stock?")) return;
     try {
       const res = await axios.delete(`/api/DeleteStock/${agentId}/${cylinderId}`, {
         headers: { Authorization: token },
@@ -420,18 +431,29 @@ const AgentStock = () => {
                           >
                             <Edit size={16} />
                           </Button>
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            onClick={() =>
+                          <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon"><Trash2 size={16} /></Button>
+                            </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure...! 
+                                This action cannot be undone. This will permanently delete the agent.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() =>
                               handleDelete(
                                 stock.agentId?._id || stock.agentId,
                                 stock.cylinderId?._id
-                              )
-                            }
-                          >
-                            <Trash2 size={16} />
-                          </Button>
+                              )}className="bg-red-600 hover:bg-red-700 text-white">Continue</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                          
                         </div>
                       </TableCell>
                     </TableRow>

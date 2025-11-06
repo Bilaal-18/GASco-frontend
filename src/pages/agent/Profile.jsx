@@ -26,6 +26,7 @@ import {
 import axios from "@/config/config";
 import AgentSidebar from "@/components/layout/AgentSidebar";
 import { toast } from "sonner";
+import ProfileImageUpload from "@/components/ProfileImageUpload";
 
 export default function ProfileDashboard() {
   const [agent, setAgent] = useState(null);
@@ -343,9 +344,19 @@ export default function ProfileDashboard() {
           <CardContent className="p-8">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
               <div className="relative">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
-                  {agent.agentname?.charAt(0)?.toUpperCase() || "A"}
-                </div>
+                {agent.profilepic ? (
+                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg">
+                    <img
+                      src={agent.profilepic}
+                      alt={agent.agentname || "Agent"}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
+                    {agent.agentname?.charAt(0)?.toUpperCase() || "A"}
+                  </div>
+                )}
                 <div className="absolute bottom-0 right-0 w-8 h-8 bg-green-500 rounded-full border-4 border-white"></div>
               </div>
               <div className="flex-1 text-center md:text-left">
@@ -378,6 +389,24 @@ export default function ProfileDashboard() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Profile Image Upload */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Profile Picture</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProfileImageUpload
+              currentImage={agent?.profilepic}
+              onImageUploaded={async (imageUrl) => {
+                await fetchAgent();
+                toast.success("Profile picture updated!");
+              }}
+              userId={agent?._id}
+              updateEndpoint="/api/updateAgent"
+            />
           </CardContent>
         </Card>
 

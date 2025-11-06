@@ -6,10 +6,10 @@ import {toast} from 'sonner';
 const userReducer = (state,action) => {
     switch(action.type){
         case "LOGIN" : {
-            return {...state,isLoggedIn:true,serverErrors:""}
+            return {...state,isLoggedIn:true,user:action.payload,serverErrors:"",loading:false}
         }
         case "LOGOUT" : {
-            return {...state,isLoggedIn:false,user:null}
+            return {...state,isLoggedIn:false,user:null,loading:false}
         }
         case "SET_SERVER_ERROR" : {
             return {...state,serverErrors:action.payload}

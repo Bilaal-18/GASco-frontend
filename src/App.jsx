@@ -18,6 +18,14 @@ import ProfileDashboard from "./pages/agent/Profile";
 import ManageStock from "./pages/agent/ManageStock";
 import Customers from "./pages/agent/Customers";
 import Bookings from "./pages/agent/Bookings";
+import CustomerDashboard from "./pages/customer/CustomerDashboard";
+import CustomerProfile from "./pages/customer/CustomerProfile";
+import CustomerBookings from "./pages/customer/CustomerBookings";
+import AvailableCylinders from "./pages/customer/AvailableCylinders";
+import BookingStatus from "./pages/customer/BookingStatus";
+import UpdateBooking from "./pages/customer/UpdateBooking";
+import AssignedAgentDetails from "./pages/customer/AssignedAgentDetails";
+import PaymentDetails from "./pages/customer/PaymentDetails";
 
 export default function App() {
   const{user} = useContext(userContext)
@@ -41,6 +49,15 @@ export default function App() {
             <Route path="/agent/myStock" element={<PrivateRoute><ManageStock/></PrivateRoute>}/>
             <Route path="/agent/customers" element={<PrivateRoute><Customers/></PrivateRoute>}/>
             <Route path="/agent/bookings" element={<PrivateRoute><Bookings/></PrivateRoute>}/>
+            
+            <Route path="/customer/dashboard" element={<PrivateRoute><CustomerDashboard/></PrivateRoute>}/>
+            <Route path="/customer/profile" element={<PrivateRoute><CustomerProfile/></PrivateRoute>}/>
+            <Route path="/customer/bookings/status/:bookingId" element={<PrivateRoute><BookingStatus/></PrivateRoute>}/>
+            <Route path="/customer/bookings/update/:bookingId" element={<PrivateRoute><UpdateBooking/></PrivateRoute>}/>
+            <Route path="/customer/bookings" element={<PrivateRoute><CustomerBookings/></PrivateRoute>}/>
+            <Route path="/customer/cylinders" element={<PrivateRoute><AvailableCylinders/></PrivateRoute>}/>
+            <Route path="/customer/agent" element={<PrivateRoute><AssignedAgentDetails/></PrivateRoute>}/>
+            <Route path="/customer/payments" element={<PrivateRoute><PaymentDetails/></PrivateRoute>}/>
       </Routes>
     </ThemeProvider>
   );

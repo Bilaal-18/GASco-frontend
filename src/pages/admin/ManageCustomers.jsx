@@ -26,9 +26,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pagination } from "@/components/ui/pagination";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -379,12 +378,35 @@ export default function ManageCustomers() {
 
             {/* Pagination */}
             {filteredCustomers.length > itemsPerPage && (
-              <div className="flex justify-center mt-4">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={Math.ceil(filteredCustomers.length / itemsPerPage)}
-                  onPageChange={setCurrentPage}
-                />
+              <div className="flex justify-between items-center mt-4">
+                <p className="text-sm text-gray-500">
+                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length} customers
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">
+                      Page {currentPage} of {Math.ceil(filteredCustomers.length / itemsPerPage)}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === Math.ceil(filteredCustomers.length / itemsPerPage)}
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>

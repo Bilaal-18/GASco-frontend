@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchCustomerDashboard } from "@/store/slices/customer/customerDashboardSlice";
 import { fetchCustomerBookings } from "@/store/slices/customer/customerBookingsSlice";
 import CustomerSidebar from "@/components/layout/CustomerSidebar";
+import CustomerChatbot from "@/components/customer/CustomerChatbot";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ShoppingCart, Package, CheckCircle2, Clock, DollarSign, Loader2 } from "lucide-react";
 
@@ -158,6 +159,9 @@ export default function CustomerDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* Customer Chatbot */}
+        <CustomerChatbot bookings={bookings} summary={summary} />
       </div>
     </div>
   );

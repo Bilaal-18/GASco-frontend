@@ -192,7 +192,7 @@ export default function ManageStock() {
   return (
     <div className="flex bg-gray-50 min-h-screen">
       <AgentSidebar />
-      <div className="flex-1 p-8">
+      <div className="flex-1 ml-64 p-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-semibold text-gray-800 flex items-center gap-2">
             <Package className="w-6 h-6 text-blue-600" />

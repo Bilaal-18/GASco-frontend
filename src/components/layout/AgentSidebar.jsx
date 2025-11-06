@@ -303,7 +303,7 @@ const AgentSidebar = () => {
   };
 
   return (
-    <div className="h-screen w-64 bg-gray-900 text-white flex flex-col p-4">
+    <div className="fixed left-0 top-0 h-screen w-64 bg-gray-900 text-white flex flex-col p-4 z-50 overflow-y-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold">Agent Panel</h1>
         <Button
@@ -333,7 +333,10 @@ const AgentSidebar = () => {
           <FileText size={18}/> Bookings
         </NavLink>
         <NavLink to="/agent/payments" className="flex items-center gap-2 hover:bg-gray-800 p-2 rounded">
-          <Wallet size={18}/> Payments
+          <Wallet size={18}/> Customer Payments
+        </NavLink>
+        <NavLink to="/agent/pay-admin" className="flex items-center gap-2 hover:bg-gray-800 p-2 rounded">
+          <DollarSign size={18}/> Pay Admin
         </NavLink>
         <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
           <DialogTrigger asChild>

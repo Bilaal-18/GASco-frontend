@@ -5,16 +5,9 @@ import { useNavigate } from "react-router-dom";
 import CustomerSidebar from "@/components/layout/CustomerSidebar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Eye, Edit, Loader2, AlertCircle, X } from "lucide-react";
+import { ShoppingCart, Eye, Edit, Loader2, AlertCircle, X, Package, Calendar, DollarSign, MapPin, ChevronDown, ChevronUp, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import PaymentButton from "@/components/PaymentButton";
 
@@ -23,31 +16,71 @@ export default function CustomerBookings() {
   const navigate = useNavigate();
   const { bookings, loading, error, updateLoading } = useSelector((state) => state.customerBookings);
   const [filter, setFilter] = useState("all");
+  const [expandedBookings, setExpandedBookings] = useState(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     dispatch(fetchCustomerBookings());
   }, [dispatch]);
 
+  // Filter and search bookings
   const filteredBookings = bookings.filter((booking) => {
-    if (filter === "all") return true;
-    
-    const status = booking.status?.toLowerCase();
-    
-    // Group similar statuses together
-    switch (filter) {
-      case "pending":
-        return status === "pending" || status === "requested";
-      case "active":
-      case "confirmed":
-        return status === "active" || status === "confirmed" || status === "in-progress";
-      case "completed":
-        return status === "completed" || status === "delivered";
-      case "cancelled":
-        return status === "cancelled";
-      default:
-        return status === filter;
+    // Status filter
+    if (filter !== "all") {
+      const status = booking.status?.toLowerCase();
+      switch (filter) {
+        case "pending":
+          if (status !== "pending" && status !== "requested") return false;
+          break;
+        case "active":
+          if (status !== "active" && status !== "confirmed" && status !== "in-progress") return false;
+          break;
+        case "completed":
+          if (status !== "completed" && status !== "delivered") return false;
+          break;
+        case "cancelled":
+          if (status !== "cancelled") return false;
+          break;
+        default:
+          if (status !== filter) return false;
+      }
     }
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const bookingId = booking._id?.slice(-8).toUpperCase() || "";
+      const cylinderName = booking.cylinder?.cylinderName?.toLowerCase() || "";
+      const cylinderType = booking.cylinder?.cylinderType?.toLowerCase() || "";
+      const agentName = booking.agent?.agentname?.toLowerCase() || booking.agent?.username?.toLowerCase() || "";
+      const status = booking.status?.toLowerCase() || "";
+      
+      if (
+        !bookingId.includes(query) &&
+        !cylinderName.includes(query) &&
+        !cylinderType.includes(query) &&
+        !agentName.includes(query) &&
+        !status.includes(query)
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedBookings = filteredBookings.slice(startIndex, endIndex);
+
+  // Reset to first page when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchQuery]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -93,6 +126,26 @@ export default function CustomerBookings() {
     }
   };
 
+  const toggleBookingDetails = (bookingId) => {
+    const newExpanded = new Set(expandedBookings);
+    if (newExpanded.has(bookingId)) {
+      newExpanded.delete(bookingId);
+    } else {
+      newExpanded.add(bookingId);
+    }
+    setExpandedBookings(newExpanded);
+  };
+
+  const formatAddress = (address) => {
+    if (!address) return "Not provided";
+    const parts = [];
+    if (address.street) parts.push(address.street);
+    if (address.city) parts.push(address.city);
+    if (address.state) parts.push(address.state);
+    if (address.pincode) parts.push(address.pincode);
+    return parts.length > 0 ? parts.join(", ") : "Not provided";
+  };
+
   if (loading) {
     return (
       <div className="flex bg-gray-50 min-h-screen">
@@ -116,24 +169,59 @@ export default function CustomerBookings() {
           <p className="text-gray-600">View and manage your gas cylinder bookings</p>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {["all", "pending", "active", "completed", "cancelled"].map((status) => (
-            <Button
-              key={status}
-              variant={filter === status ? "default" : "outline"}
-              onClick={() => setFilter(status)}
-              className="capitalize"
-            >
-              {status === "all" 
-                ? "All" 
-                : status === "active" 
-                ? "Active/Confirmed" 
-                : status === "completed"
-                ? "Completed/Delivered"
-                : status.charAt(0).toUpperCase() + status.slice(1)}
-            </Button>
-          ))}
+        {/* Search and Filter Section */}
+        <div className="mb-6 space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Input
+              type="text"
+              placeholder="Search by booking ID, cylinder name, agent name, or status..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Filter Tabs and Items Per Page */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex gap-2 flex-wrap">
+              {["all", "pending", "active", "completed", "cancelled"].map((status) => (
+                <Button
+                  key={status}
+                  variant={filter === status ? "default" : "outline"}
+                  onClick={() => setFilter(status)}
+                  className="capitalize"
+                >
+                  {status === "all" 
+                    ? "All" 
+                    : status === "active" 
+                    ? "Active/Confirmed" 
+                    : status === "completed"
+                    ? "Completed/Delivered"
+                    : status.charAt(0).toUpperCase() + status.slice(1)}
+                </Button>
+              ))}
+            </div>
+            
+            {/* Items Per Page */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Items per page:</label>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="border rounded-md px-3 py-1 text-sm"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -154,6 +242,11 @@ export default function CustomerBookings() {
           <CardHeader>
             <CardTitle>
               Bookings ({filteredBookings.length})
+              {searchQuery && (
+                <span className="text-sm font-normal text-gray-500 ml-2">
+                  - Search: "{searchQuery}"
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -170,87 +263,333 @@ export default function CustomerBookings() {
                 <p className="text-gray-500 text-sm mt-2">{error}</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Booking ID</TableHead>
-                    <TableHead>Cylinder</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBookings.map((booking) => (
-                    <TableRow key={booking._id}>
-                      <TableCell className="font-medium">
-                        #{booking._id?.slice(-8).toUpperCase()}
-                      </TableCell>
-                      <TableCell>
-                        {booking.cylinder?.cylinderName || booking.cylinder?.cylinderType || "N/A"}
-                        <p className="text-xs text-gray-500">{booking.cylinder?.cylinderType}</p>
-                      </TableCell>
-                      <TableCell>{booking.quantity || 0}</TableCell>
-                      <TableCell className="font-semibold">
-                        ₹{((booking.quantity || 0) * (booking.cylinder?.price || 0)).toLocaleString()}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(booking.status)}</TableCell>
-                      <TableCell>
-                        {new Date(booking.createdAt || booking.bookingDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2 flex-wrap">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewStatus(booking)}
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            View
-                          </Button>
-                          {booking.paymentStatus !== "paid" && (
-                            <PaymentButton
-                              booking={booking}
-                              onPaymentSuccess={() => {
-                                dispatch(fetchCustomerBookings());
-                                toast.success("Payment successful! Booking updated.");
-                              }}
-                            />
-                          )}
-                          {(booking.status === "pending" || booking.status === "requested") && (
-                            <>
+              <>
+                <div className="space-y-4">
+                  {paginatedBookings.map((booking) => {
+                  const isExpanded = expandedBookings.has(booking._id);
+                  const totalAmount = ((booking.quantity || 0) * (booking.cylinder?.price || 0));
+                  const bookingDate = new Date(booking.createdAt || booking.bookingDate);
+                  
+                  return (
+                    <Card key={booking._id} className="overflow-hidden">
+                      <CardContent className="p-0">
+                        {/* Main Booking Row */}
+                        <div className="p-6 hover:bg-gray-50 transition-colors">
+                          <div className="flex flex-col md:flex-row md:items-center gap-4">
+                            {/* Booking Info */}
+                            <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-4">
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Booking ID</p>
+                                <p className="font-semibold">#{booking._id?.slice(-8).toUpperCase()}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Cylinder</p>
+                                <p className="font-medium">{booking.cylinder?.cylinderName || "N/A"}</p>
+                                <p className="text-xs text-gray-500">{booking.cylinder?.cylinderType}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Quantity</p>
+                                <p className="font-medium">{booking.quantity || 0}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Amount</p>
+                                <p className="font-semibold text-green-600">₹{totalAmount.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Status</p>
+                                <div>{getStatusBadge(booking.status)}</div>
+                                {booking.status === "delivered" && booking.paymentStatus !== "paid" && (
+                                  <p className="text-xs text-orange-600 mt-1 font-medium">
+                                    {booking.paymentMethod === "online" ? "Pay Now" : "Pay Cash"}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2 flex-wrap items-center">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleUpdateBooking(booking)}
-                                disabled={updateLoading}
+                                onClick={() => toggleBookingDetails(booking._id)}
+                                className="flex items-center gap-1"
                               >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Update
+                                {isExpanded ? (
+                                  <>
+                                    <ChevronUp className="w-4 h-4" />
+                                    Hide Details
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="w-4 h-4" />
+                                    View Details
+                                  </>
+                                )}
                               </Button>
                               <Button
+                                variant="outline"
                                 size="sm"
-                                onClick={() => handleCancelBooking(booking)}
-                                disabled={updateLoading}
-                                className="bg-red-600 hover:bg-red-700 text-white"
+                                onClick={() => handleViewStatus(booking)}
                               >
-                                {updateLoading ? (
-                                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                                ) : (
-                                  <X className="w-4 h-4 mr-1" />
-                                )}
-                                Cancel
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
                               </Button>
-                            </>
-                          )}
+                            </div>
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div className="border-t bg-gray-50 p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {/* Cylinder Details */}
+                              <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                  <Package className="w-4 h-4" />
+                                  Cylinder Details
+                                </h4>
+                                <div className="space-y-2 text-sm">
+                                  <p>
+                                    <span className="text-gray-600">Name:</span>{" "}
+                                    <span className="font-medium">{booking.cylinder?.cylinderName || "N/A"}</span>
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">Type:</span>{" "}
+                                    <span className="font-medium">{booking.cylinder?.cylinderType || "N/A"}</span>
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">Weight:</span>{" "}
+                                    <span className="font-medium">{booking.cylinder?.weight || "N/A"} kg</span>
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">Price per unit:</span>{" "}
+                                    <span className="font-medium">₹{booking.cylinder?.price?.toLocaleString() || "N/A"}</span>
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">Quantity:</span>{" "}
+                                    <span className="font-medium">{booking.quantity || 0}</span>
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Order Information */}
+                              <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                  <Calendar className="w-4 h-4" />
+                                  Order Information
+                                </h4>
+                                <div className="space-y-2 text-sm">
+                                  <p>
+                                    <span className="text-gray-600">Booking Date:</span>{" "}
+                                    <span className="font-medium">{bookingDate.toLocaleDateString()}</span>
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">Booking Time:</span>{" "}
+                                    <span className="font-medium">{bookingDate.toLocaleTimeString()}</span>
+                                  </p>
+                                  {booking.deliveryDate && (
+                                    <p>
+                                      <span className="text-gray-600">Delivery Date:</span>{" "}
+                                      <span className="font-medium">
+                                        {new Date(booking.deliveryDate).toLocaleDateString()}
+                                      </span>
+                                    </p>
+                                  )}
+                                  <p>
+                                    <span className="text-gray-600">Total Amount:</span>{" "}
+                                    <span className="font-semibold text-green-600 text-lg">
+                                      ₹{totalAmount.toLocaleString()}
+                                    </span>
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">Return Status:</span>{" "}
+                                    <Badge variant={booking.isReturned ? "default" : "secondary"}>
+                                      {booking.isReturned ? "Returned" : "Not Returned"}
+                                    </Badge>
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Payment & Agent Info */}
+                              <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                  <DollarSign className="w-4 h-4" />
+                                  Payment & Agent
+                                </h4>
+                                <div className="space-y-2 text-sm mb-4">
+                                  <p>
+                                    <span className="text-gray-600">Payment Method:</span>{" "}
+                                    <Badge variant="outline" className="ml-1">
+                                      {booking.paymentMethod === "online" ? "Online" : "Cash"}
+                                    </Badge>
+                                  </p>
+                                  <p>
+                                    <span className="text-gray-600">Payment Status:</span>{" "}
+                                    <Badge
+                                      variant={booking.paymentStatus === "paid" ? "default" : "secondary"}
+                                      className={
+                                        booking.paymentStatus === "paid"
+                                          ? "bg-green-500 text-white"
+                                          : "bg-yellow-500 text-white"
+                                      }
+                                    >
+                                      {booking.paymentStatus?.toUpperCase() || "PENDING"}
+                                    </Badge>
+                                  </p>
+                                  {booking.status === "delivered" && booking.paymentStatus !== "paid" && (
+                                    <p className="text-xs text-orange-600 font-medium">
+                                      {booking.paymentMethod === "online" 
+                                        ? "Please complete your payment now"
+                                        : "Please pay in cash to your agent"}
+                                    </p>
+                                  )}
+                                  {booking.agent && (
+                                    <>
+                                      <p>
+                                        <span className="text-gray-600">Agent Name:</span>{" "}
+                                        <span className="font-medium">{booking.agent?.agentname || booking.agent?.username || "N/A"}</span>
+                                      </p>
+                                      <p>
+                                        <span className="text-gray-600">Agent Email:</span>{" "}
+                                        <span className="font-medium">{booking.agent?.email || "N/A"}</span>
+                                      </p>
+                                      {booking.agent?.phoneNo && (
+                                        <p>
+                                          <span className="text-gray-600">Agent Phone:</span>{" "}
+                                          <span className="font-medium">{booking.agent.phoneNo}</span>
+                                        </p>
+                                      )}
+                                      {booking.agent?.address && (
+                                        <p>
+                                          <span className="text-gray-600 flex items-start gap-1">
+                                            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                            <span>Address:</span>
+                                          </span>{" "}
+                                          <span className="font-medium block mt-1">
+                                            {formatAddress(booking.agent.address)}
+                                          </span>
+                                        </p>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                                
+                                {/* Action Buttons */}
+                                <div className="flex flex-col gap-2 mt-4">
+                                  {/* Payment button only shows for delivered bookings with online payment method */}
+                                  {booking.status === "delivered" && booking.paymentStatus !== "paid" && booking.paymentMethod === "online" && (
+                                    <PaymentButton
+                                      booking={booking}
+                                      onPaymentSuccess={() => {
+                                        dispatch(fetchCustomerBookings());
+                                        toast.success("Payment successful! Booking updated.");
+                                      }}
+                                    />
+                                  )}
+                                  {booking.status === "delivered" && booking.paymentStatus !== "paid" && booking.paymentMethod === "cash" && (
+                                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                      <p className="text-sm text-blue-800 font-medium">
+                                        Cash Payment Required
+                                      </p>
+                                      <p className="text-xs text-blue-600 mt-1">
+                                        Please pay in cash to your agent: {booking.agent?.agentname || booking.agent?.username || "N/A"}
+                                      </p>
+                                    </div>
+                                  )}
+                                  {(booking.status === "pending" || booking.status === "requested") && (
+                                    <div className="flex gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleUpdateBooking(booking)}
+                                        disabled={updateLoading}
+                                        className="flex-1"
+                                      >
+                                        <Edit className="w-4 h-4 mr-1" />
+                                        Update
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleCancelBooking(booking)}
+                                        disabled={updateLoading}
+                                        className="bg-red-600 hover:bg-red-700 text-white flex-1"
+                                      >
+                                        {updateLoading ? (
+                                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                        ) : (
+                                          <X className="w-4 h-4 mr-1" />
+                                        )}
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                  })}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="mt-6 flex items-center justify-between">
+                    <div className="text-sm text-gray-600">
+                      Showing {startIndex + 1} to {Math.min(endIndex, filteredBookings.length)} of {filteredBookings.length} bookings
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter((page) => {
+                            // Show first page, last page, current page, and pages around current
+                            if (totalPages <= 7) return true;
+                            if (page === 1 || page === totalPages) return true;
+                            if (Math.abs(page - currentPage) <= 1) return true;
+                            return false;
+                          })
+                          .map((page, index, array) => {
+                            // Add ellipsis
+                            const showEllipsisBefore = index > 0 && page - array[index - 1] > 1;
+                            return (
+                              <div key={page} className="flex items-center gap-1">
+                                {showEllipsisBefore && <span className="px-2">...</span>}
+                                <Button
+                                  variant={currentPage === page ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => setCurrentPage(page)}
+                                  className="min-w-[40px]"
+                                >
+                                  {page}
+                                </Button>
+                              </div>
+                            );
+                          })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

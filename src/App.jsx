@@ -13,11 +13,14 @@ import ManageStocks from "./pages/admin/ManageStocks";
 import ManageCylinders from "./pages/admin/ManageCylinders";
 import AgentStock from "./pages/admin/AgentStock";
 import GasRequests from "./pages/admin/GasRequests";
+import AdminPayments from "./pages/admin/AdminPayments";
 import Dashboard from "./pages/agent/Dashboard";
 import ProfileDashboard from "./pages/agent/Profile";
 import ManageStock from "./pages/agent/ManageStock";
 import Customers from "./pages/agent/Customers";
 import Bookings from "./pages/agent/Bookings";
+import Payments from "./pages/agent/Payments";
+import AgentPayments from "./pages/agent/AgentPayments";
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import CustomerProfile from "./pages/customer/CustomerProfile";
 import CustomerBookings from "./pages/customer/CustomerBookings";
@@ -43,12 +46,15 @@ export default function App() {
             <Route path="/admin/manage-cylinders" element={<PrivateRoute><ManageCylinders/></PrivateRoute>}/>
             <Route path="/admin/manage-agentstock" element={<PrivateRoute><AgentStock/></PrivateRoute>}/>
             <Route path="/admin/gas-requests" element={<PrivateRoute><GasRequests/></PrivateRoute>}/>
+            <Route path="/admin/payments" element={<PrivateRoute><AdminPayments/></PrivateRoute>}/>
             
             <Route path="/agent/dashboard" element={<PrivateRoute><Dashboard/></PrivateRoute>}/>
             <Route path="/agent/profile" element={<PrivateRoute><ProfileDashboard/></PrivateRoute>}/>
             <Route path="/agent/myStock" element={<PrivateRoute><ManageStock/></PrivateRoute>}/>
             <Route path="/agent/customers" element={<PrivateRoute><Customers/></PrivateRoute>}/>
             <Route path="/agent/bookings" element={<PrivateRoute><Bookings/></PrivateRoute>}/>
+            <Route path="/agent/payments" element={<PrivateRoute><Payments/></PrivateRoute>}/>
+            <Route path="/agent/pay-admin" element={<PrivateRoute><AgentPayments/></PrivateRoute>}/>
             
             <Route path="/customer/dashboard" element={<PrivateRoute><CustomerDashboard/></PrivateRoute>}/>
             <Route path="/customer/profile" element={<PrivateRoute><CustomerProfile/></PrivateRoute>}/>

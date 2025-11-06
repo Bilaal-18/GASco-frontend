@@ -162,7 +162,9 @@ export default function Customers() {
 
   const handleDeleteCustomer = async (customerId) => {
     try {
-      await axios.delete(`/api/remove/${customerId}`, {
+      setLoading(true);
+      // First get the agent's account info to get their ID
+      const accountRes = await axios.get("/api/account", {
         headers: { Authorization: token },
       });
       toast.success("Customer deleted successfully!");

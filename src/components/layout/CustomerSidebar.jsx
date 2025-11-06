@@ -14,7 +14,7 @@ const CustomerSidebar = () => {
   };
 
   return (
-    <aside className="w-64 h-screen bg-slate-900 text-white flex flex-col p-5 space-y-2">
+    <aside className="fixed left-0 top-0 w-64 h-screen bg-slate-900 text-white flex flex-col p-5 space-y-2 z-50 overflow-y-auto">
       <h2 className="text-xl font-semibold mb-6 text-center">
         Customer Panel
       </h2>
@@ -107,6 +107,7 @@ const CustomerSidebar = () => {
 };
 
 export default CustomerSidebar;
+
 
 
 

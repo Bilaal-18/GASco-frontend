@@ -286,14 +286,8 @@ export default function ProfileDashboard() {
 
   if (loading) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
-        <AgentSidebar />
-        <div className="flex-1 ml-64 flex justify-center items-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading profile...</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-center h-screen text-gray-500">
+        Loading profile...
       </div>
     );
   }
@@ -343,22 +337,20 @@ export default function ProfileDashboard() {
         <Card className="mb-8 shadow-lg">
           <CardContent className="p-8">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-              <div className="relative">
-                {agent.profilepic ? (
-                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg">
-                    <img
-                      src={agent.profilepic}
-                      alt={agent.agentname || "Agent"}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-lg">
-                    {agent.agentname?.charAt(0)?.toUpperCase() || "A"}
-                  </div>
-                )}
-                <div className="absolute bottom-0 right-0 w-8 h-8 bg-green-500 rounded-full border-4 border-white"></div>
+              {/* Profile Photo Upload */}
+              <div className="flex-shrink-0">
+                <ProfileImageUpload
+                  currentImage={agent?.profilepic}
+                  onImageUploaded={async (imageUrl) => {
+                    await fetchAgent();
+                    toast.success("Profile picture updated!");
+                  }}
+                  userId={agent?._id}
+                  updateEndpoint="/api/updateAgent"
+                />
               </div>
+              
+              {/* Agent Details */}
               <div className="flex-1 text-center md:text-left">
                 <h2 className="text-3xl font-bold text-gray-800 mb-2">
                   {agent.agentname || "Agent"}
@@ -389,24 +381,6 @@ export default function ProfileDashboard() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Profile Image Upload */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Profile Picture</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ProfileImageUpload
-              currentImage={agent?.profilepic}
-              onImageUploaded={async (imageUrl) => {
-                await fetchAgent();
-                toast.success("Profile picture updated!");
-              }}
-              userId={agent?._id}
-              updateEndpoint="/api/updateAgent"
-            />
           </CardContent>
         </Card>
 

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import AgentSidebar from "@/components/layout/AgentSidebar";
-import AIBookingChatbot from "@/components/agent/AIBookingChatbot";
 import axios from "@/config/config";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -28,7 +27,6 @@ const Dashboard = () => {
     pendingPayments: 0,
   });
   const [todayBookings, setTodayBookings] = useState([]);
-  const [allBookings, setAllBookings] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -44,11 +42,10 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch stats, today's bookings, and all bookings in parallel
-      const [statsRes, bookingsRes, allBookingsRes] = await Promise.all([
+      // Fetch stats and today's bookings in parallel
+      const [statsRes, bookingsRes] = await Promise.all([
         axios.get("/api/getStats", { headers: { Authorization: token } }),
         axios.get("/api/todayBookings", { headers: { Authorization: token } }),
-        axios.get("/api/agentBookings", { headers: { Authorization: token } }).catch(() => ({ data: { bookings: [] } })),
       ]);
 
       // Set stats data
@@ -74,11 +71,6 @@ const Dashboard = () => {
       const bookings = bookingsRes.data?.bookings || bookingsRes.data || [];
       const bookingsArray = Array.isArray(bookings) ? bookings : [];
       setTodayBookings(bookingsArray);
-
-      // Set all bookings for chatbot
-      const allBookingsData = allBookingsRes.data?.bookings || allBookingsRes.data || [];
-      const allBookingsArray = Array.isArray(allBookingsData) ? allBookingsData : [];
-      setAllBookings(allBookingsArray);
 
       // Generate monthly data from today's bookings
       if (bookingsArray.length > 0) {
@@ -173,6 +165,7 @@ const Dashboard = () => {
                       <th className="p-2 text-left">Cylinder</th>
                       <th className="p-2 text-left">Quantity</th>
                       <th className="p-2 text-left">Status</th>
+                      <th className="p-2 text-left">Payment Method</th>
                       <th className="p-2 text-left">Payment</th>
                       <th className="p-2 text-left">Amount</th>
                     </tr>
@@ -201,12 +194,29 @@ const Dashboard = () => {
                         <td className="p-2">
                           <span
                             className={`px-2 py-1 rounded text-xs font-medium ${
+                              booking.paymentMethod === "online"
+                                ? "bg-purple-100 text-purple-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {booking.paymentMethod === "online" ? "Online" : "Cash"}
+                          </span>
+                        </td>
+                        <td className="p-2">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
                               booking.paymentStatus === "paid"
                                 ? "bg-green-100 text-green-800"
+                                : booking.status === "delivered" && booking.paymentMethod === "cash"
+                                ? "bg-orange-100 text-orange-800"
                                 : "bg-yellow-100 text-yellow-800"
                             }`}
                           >
-                            {booking.paymentStatus || "pending"}
+                            {booking.paymentStatus === "paid" 
+                              ? "Paid" 
+                              : booking.status === "delivered" && booking.paymentMethod === "cash"
+                              ? "Collect Cash"
+                              : "Pending"}
                           </span>
                         </td>
                         <td className="p-2">
@@ -297,9 +307,6 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
-
-        {/* AI Booking Chatbot */}
-        <AIBookingChatbot bookings={allBookings} stats={stats} />
       </div>
     </div>
   );

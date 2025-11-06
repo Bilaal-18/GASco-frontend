@@ -44,7 +44,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner";
-import { Edit, Trash2, Plus, FileDown, Receipt } from "lucide-react";
+import { Edit, Trash2, Plus, FileDown, Receipt, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -63,6 +63,9 @@ const AgentStock = () => {
   const [open, setOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState("all");
   const [filteredStocks, setFilteredStocks] = useState([]);
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const token = localStorage.getItem("token");
 
@@ -183,18 +186,53 @@ const AgentStock = () => {
     setOpen(true);
   };
 
+  // 🟢 Filter by Agent and Search
+  useEffect(() => {
+    let filtered = stocks;
+
+    // Filter by agent
+    if (selectedAgent !== "all") {
+      filtered = filtered.filter(
+        (s) => s.agentId?._id === selectedAgent || s.agentId === selectedAgent
+      );
+    }
+
+    // Filter by search
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter((s) => {
+        const agentName = typeof s.agentId === "object" 
+          ? s.agentId?.agentname?.toLowerCase() || ""
+          : "";
+        const cylinderType = s.cylinderId?.cylinderType?.toLowerCase() || "";
+        const weight = s.cylinderId?.weight?.toString() || "";
+        const price = s.cylinderId?.price?.toString() || "";
+        
+        return (
+          agentName.includes(searchLower) ||
+          cylinderType.includes(searchLower) ||
+          weight.includes(search) ||
+          price.includes(search)
+        );
+      });
+    }
+
+    setFilteredStocks(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [selectedAgent, search, stocks]);
+
   // 🟢 Filter by Agent (Dropdown version)
   const handleAgentSelect = (value) => {
     setSelectedAgent(value);
-    if (value === "all") {
-      setFilteredStocks(stocks);
-    } else {
-      const filtered = stocks.filter(
-        (s) => s.agentId?._id === value || s.agentId === value
-      );
-      setFilteredStocks(filtered);
-    }
   };
+
+  // Pagination
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedStocks = filteredStocks.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+  const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
 
   // 📄 Full Report for all agents
   const generateReport = () => {
@@ -279,6 +317,17 @@ const AgentStock = () => {
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Agent Stock Management</h2>
           <div className="flex items-center gap-3">
+            {/* 🔍 Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search by agent, cylinder, weight, price..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 w-64"
+              />
+            </div>
+            
             {/* 🔍 Filter by Agent Dropdown */}
             <Select onValueChange={handleAgentSelect} value={selectedAgent}>
               <SelectTrigger className="w-52">
@@ -391,26 +440,36 @@ const AgentStock = () => {
         {/* Table */}
         <Card>
           <CardHeader>
-            <CardTitle>All Agent Stocks</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>All Agent Stocks</CardTitle>
+              <p className="text-sm text-gray-500">
+                Showing {paginatedStocks.length} of {filteredStocks.length} stocks
+              </p>
+            </div>
           </CardHeader>
           <CardContent>
             {filteredStocks.length === 0 ? (
-              <p className="text-gray-500 text-sm">No stock available.</p>
+              <p className="text-gray-500 text-sm">
+                {search || selectedAgent !== "all" 
+                  ? "No stock found matching your filters." 
+                  : "No stock available."}
+              </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Agent</TableHead>
-                    <TableHead>Cylinder Type</TableHead>
-                    <TableHead>Weight</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Total Amount</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStocks.map((stock) => (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Agent</TableHead>
+                      <TableHead>Cylinder Type</TableHead>
+                      <TableHead>Weight</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Total Amount</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedStocks.map((stock) => (
                     <TableRow key={stock._id}>
                       <TableCell>
                         {typeof stock.agentId === "object"
@@ -457,9 +516,44 @@ const AgentStock = () => {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination */}
+                {filteredStocks.length > itemsPerPage && (
+                  <div className="flex justify-between items-center mt-4">
+                    <p className="text-sm text-gray-500">
+                      Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredStocks.length)} of {filteredStocks.length} stocks
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage((p) => p - 1)}
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((p) => p + 1)}
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

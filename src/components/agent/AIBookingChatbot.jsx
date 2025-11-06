@@ -2,15 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Bot, X, Send, MessageCircle } from "lucide-react";
+import { Bot, X, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import axios from "@/config/config";
 
-const AIBookingChatbot = ({ bookings, stats }) => {
+const AIBookingChatbot = ({ bookings = [], stats = {} }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       role: "bot",
-      content: "Hello! I'm your booking assistant. I can help you with:\n• Daily booking counts (today, yesterday, or specific dates)\n• Booking status information\n• Customer details\n• Payment information\n• Delivery status\n• Detailed booking information\n\nTry asking:\n• 'How many bookings today?'\n• 'Show pending bookings'\n• 'Bookings on 15-01-2024'\n• 'Details for yesterday'\n• 'Payment summary'",
+      content: "Hello! I'm your AI-powered booking assistant. 🤖✨\n\nI can help you with:\n• 📊 Booking information and analytics\n• 💰 Payment details and status\n• 👥 Customer information\n• 📦 Cylinder type breakdowns\n• 📈 Sales insights\n\n**Try asking me:**\n• 'How many bookings today?'\n• 'Show me pending bookings'\n• 'What cylinder types did I sell?'\n• 'Who are my top customers?'\n• 'Payment summary'\n\nI understand natural language and can correct spelling mistakes! 💬",
     },
   ]);
   const [input, setInput] = useState("");
@@ -19,12 +20,11 @@ const AIBookingChatbot = ({ bookings, stats }) => {
   const inputRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
-  // Scroll to bottom when messages change or typing state changes
+  // Scroll to bottom when messages change
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-    // Also try scrolling the container directly
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
@@ -32,7 +32,6 @@ const AIBookingChatbot = ({ bookings, stats }) => {
 
   useEffect(() => {
     if (isOpen) {
-      // Small delay to ensure DOM is updated
       setTimeout(() => {
         scrollToBottom();
       }, 100);
@@ -45,16 +44,19 @@ const AIBookingChatbot = ({ bookings, stats }) => {
     }
   }, [isOpen]);
 
+  // Process query with all available agent data
   const processQuery = (query) => {
     const lowerQuery = query.toLowerCase().trim();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Parse date from query (e.g., "yesterday", "2024-01-15", "last week")
+    // Filter out cancelled bookings
+    const activeBookings = bookings.filter(b => b.status !== 'cancelled');
+    
+    // Parse date from query
     let targetDate = null;
-    let filteredBookings = bookings;
+    let filteredBookings = activeBookings;
 
-    // Check for specific date mentions
     if (lowerQuery.includes("yesterday")) {
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
@@ -62,11 +64,10 @@ const AIBookingChatbot = ({ bookings, stats }) => {
     } else if (lowerQuery.includes("today") || lowerQuery.includes("this day")) {
       targetDate = today;
     } else {
-      // Try to extract date from query (format: YYYY-MM-DD or DD-MM-YYYY or DD/MM/YYYY)
       const datePatterns = [
-        /\b(\d{4}-\d{2}-\d{2})\b/, // YYYY-MM-DD
-        /\b(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})\b/, // DD-MM-YYYY or DD/MM/YYYY
-        /\b(\d{1,2})[-\/](\d{1,2})[-\/](\d{2})\b/, // DD-MM-YY or DD/MM/YY
+        /\b(\d{4}-\d{2}-\d{2})\b/,
+        /\b(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})\b/,
+        /\b(\d{1,2})[-\/](\d{1,2})[-\/](\d{2})\b/,
       ];
 
       for (const pattern of datePatterns) {
@@ -74,16 +75,13 @@ const AIBookingChatbot = ({ bookings, stats }) => {
         if (match) {
           try {
             if (match[1]?.includes("-") && match[1].length === 10) {
-              // YYYY-MM-DD format
               targetDate = new Date(match[1]);
             } else if (match[3]) {
-              // DD-MM-YYYY format
               const day = parseInt(match[1]);
               const month = parseInt(match[2]) - 1;
               const year = parseInt(match[3]);
               targetDate = new Date(year, month, day);
             } else if (match[2]) {
-              // DD-MM-YY format (assume 20XX)
               const day = parseInt(match[1]);
               const month = parseInt(match[2]) - 1;
               const year = 2000 + parseInt(match[3]);
@@ -102,14 +100,13 @@ const AIBookingChatbot = ({ bookings, stats }) => {
 
     // Filter bookings by date if specified
     if (targetDate) {
-      filteredBookings = bookings.filter((booking) => {
+      filteredBookings = activeBookings.filter((booking) => {
         const bookingDate = new Date(booking.createdAt || booking.created_at);
         bookingDate.setHours(0, 0, 0, 0);
         return bookingDate.getTime() === targetDate.getTime();
       });
     } else {
-      // Default to today's bookings if no date specified
-      filteredBookings = bookings.filter((booking) => {
+      filteredBookings = activeBookings.filter((booking) => {
         const bookingDate = new Date(booking.createdAt || booking.created_at);
         bookingDate.setHours(0, 0, 0, 0);
         return bookingDate.getTime() === today.getTime();
@@ -124,14 +121,52 @@ const AIBookingChatbot = ({ bookings, stats }) => {
         })
       : "today";
 
-    // Filter today's bookings (for backward compatibility)
-    const todayBookings = bookings.filter((booking) => {
+    const todayBookings = activeBookings.filter((booking) => {
       const bookingDate = new Date(booking.createdAt || booking.created_at);
       bookingDate.setHours(0, 0, 0, 0);
       return bookingDate.getTime() === today.getTime();
     });
 
-    // Total bookings (supports date queries)
+    // Calculate cylinder type breakdown
+    const cylinderTypes = {};
+    activeBookings.forEach(b => {
+      const type = b.cylinder?.cylinderType || 'Unknown';
+      if (!cylinderTypes[type]) {
+        cylinderTypes[type] = { count: 0, quantity: 0, amount: 0 };
+      }
+      cylinderTypes[type].count += 1;
+      cylinderTypes[type].quantity += (b.quantity || 0);
+      cylinderTypes[type].amount += ((b.cylinder?.price || 0) * (b.quantity || 0));
+    });
+
+    // Calculate today's cylinder breakdown
+    const todayCylinderTypes = {};
+    todayBookings.forEach(b => {
+      const type = b.cylinder?.cylinderType || 'Unknown';
+      if (!todayCylinderTypes[type]) {
+        todayCylinderTypes[type] = { count: 0, quantity: 0, amount: 0 };
+      }
+      todayCylinderTypes[type].count += 1;
+      todayCylinderTypes[type].quantity += (b.quantity || 0);
+      todayCylinderTypes[type].amount += ((b.cylinder?.price || 0) * (b.quantity || 0));
+    });
+
+    // Get top customers
+    const customers = {};
+    activeBookings.forEach(b => {
+      const name = b.customer?.username || 'Unknown';
+      if (!customers[name]) {
+        customers[name] = { bookings: 0, amount: 0 };
+      }
+      customers[name].bookings += 1;
+      customers[name].amount += ((b.cylinder?.price || 0) * (b.quantity || 0));
+    });
+    const topCustomers = Object.entries(customers)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10);
+
+    // Total bookings count
     if (
       lowerQuery.includes("how many") ||
       lowerQuery.includes("total") ||
@@ -166,38 +201,14 @@ const AIBookingChatbot = ({ bookings, stats }) => {
       return response;
     }
 
-    // Delivered bookings
-    if (
-      lowerQuery.includes("delivered") ||
-      lowerQuery.includes("completed") ||
-      lowerQuery.includes("done")
-    ) {
-      const deliveredBookings = filteredBookings.filter(
-        (b) => b.status === "delivered"
-      );
-      if (deliveredBookings.length === 0) {
-        return `You have **no delivered bookings** on ${dateLabel} yet.`;
-      }
-      let response = `You have **${deliveredBookings.length} delivered bookings** on ${dateLabel}:\n\n`;
-      deliveredBookings.slice(0, 5).forEach((booking, idx) => {
-        const amount =
-          (booking.cylinder?.price || 0) * (booking.quantity || 0);
-        const createdAt = new Date(booking.createdAt || booking.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-        response += `${idx + 1}. **${booking.customer?.username || "Unknown"}** - ${booking.cylinder?.cylinderType || "N/A"} (Qty: ${booking.quantity || 0}) - ₹${amount.toLocaleString()} - Time: ${createdAt}\n`;
-      });
-      if (deliveredBookings.length > 5) {
-        response += `\n...and ${deliveredBookings.length - 5} more delivered bookings.`;
-      }
-      return response;
-    }
-
     // Payment related queries
     if (
       lowerQuery.includes("payment") ||
       lowerQuery.includes("paid") ||
       lowerQuery.includes("amount") ||
       lowerQuery.includes("money") ||
-      lowerQuery.includes("collected")
+      lowerQuery.includes("collected") ||
+      lowerQuery.includes("revenue")
     ) {
       const paidBookings = filteredBookings.filter(
         (b) => b.paymentStatus === "paid"
@@ -217,7 +228,54 @@ const AIBookingChatbot = ({ bookings, stats }) => {
         0
       );
 
-      return `**Payment Summary for ${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}:**\n\n💰 Collected: ₹${totalCollected.toLocaleString()} (${paidBookings.length} bookings)\n⏳ Pending: ₹${totalPending.toLocaleString()} (${pendingPayments.length} bookings)\n\n**Total Amount:** ₹${(totalCollected + totalPending).toLocaleString()}`;
+      return `**Payment Summary for ${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}:**\n\n💰 Collected: ₹${totalCollected.toLocaleString()} (${paidBookings.length} bookings)\n⏳ Pending: ₹${totalPending.toLocaleString()} (${pendingPayments.length} bookings)\n\n**Total Amount:** ₹${(totalCollected + totalPending).toLocaleString()}\n\n**Overall Stats:**\n• Total Collected: ₹${(stats.amountCollected || 0).toLocaleString()}\n• Total Pending: ₹${(stats.pendingPayments || 0).toLocaleString()}`;
+    }
+
+    // Cylinder type queries
+    if (
+      lowerQuery.includes("cylinder") ||
+      lowerQuery.includes("type") ||
+      lowerQuery.includes("gas") ||
+      lowerQuery.includes("breakdown")
+    ) {
+      if (lowerQuery.includes("today")) {
+        const todayTypes = Object.entries(todayCylinderTypes);
+        if (todayTypes.length === 0) {
+          return `No cylinder bookings found for today.`;
+        }
+        let response = `**Today's Cylinder Types:**\n\n`;
+        todayTypes.forEach(([type, data]) => {
+          response += `• **${type}**: ${data.count} bookings, ${data.quantity} cylinders, ₹${data.amount.toLocaleString()}\n`;
+        });
+        return response;
+      } else {
+        const allTypes = Object.entries(cylinderTypes);
+        if (allTypes.length === 0) {
+          return `No cylinder data available.`;
+        }
+        let response = `**All Cylinder Types Breakdown:**\n\n`;
+        allTypes.forEach(([type, data]) => {
+          response += `• **${type}**: ${data.count} bookings, ${data.quantity} cylinders, ₹${data.amount.toLocaleString()}\n`;
+        });
+        return response;
+      }
+    }
+
+    // Customer queries
+    if (
+      lowerQuery.includes("customer") ||
+      lowerQuery.includes("who") ||
+      lowerQuery.includes("top") ||
+      lowerQuery.includes("client")
+    ) {
+      if (topCustomers.length === 0) {
+        return `No customer data available.`;
+      }
+      let response = `**Top Customers (by total amount):**\n\n`;
+      topCustomers.forEach((c, idx) => {
+        response += `${idx + 1}. **${c.name}**: ${c.bookings} bookings, ₹${c.amount.toLocaleString()}\n`;
+      });
+      return response;
     }
 
     // Status overview
@@ -234,73 +292,7 @@ const AIBookingChatbot = ({ bookings, stats }) => {
           .length,
       };
 
-      return `**${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}'s Booking Status Overview:**\n\n📋 Total Bookings: ${filteredBookings.length}\n⏳ Pending: ${statusCounts.pending}\n✅ Confirmed: ${statusCounts.confirmed}\n🚚 Delivered: ${statusCounts.delivered}\n\n**Payment Status:**\n💰 Paid: ${filteredBookings.filter((b) => b.paymentStatus === "paid").length}\n💳 Pending Payment: ${filteredBookings.filter((b) => b.paymentStatus === "pending").length}`;
-    }
-
-    // Customer queries
-    if (
-      lowerQuery.includes("customer") ||
-      lowerQuery.includes("who") ||
-      lowerQuery.includes("name")
-    ) {
-      if (filteredBookings.length === 0) {
-        return `No bookings found for ${dateLabel}.`;
-      }
-      let response = `**${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}'s Customers (${filteredBookings.length}):**\n\n`;
-      filteredBookings.slice(0, 10).forEach((booking, idx) => {
-        const createdAt = new Date(booking.createdAt || booking.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-        response += `${idx + 1}. **${booking.customer?.username || "Unknown"}** - ${booking.cylinder?.cylinderType || "N/A"} x${booking.quantity || 0} - ${booking.status} - ${createdAt}\n`;
-      });
-      if (filteredBookings.length > 10) {
-        response += `\n...and ${filteredBookings.length - 10} more customers.`;
-      }
-      return response;
-    }
-
-    // Cylinder type queries
-    if (
-      lowerQuery.includes("cylinder") ||
-      lowerQuery.includes("type") ||
-      lowerQuery.includes("gas")
-    ) {
-      const cylinderTypes = {};
-      filteredBookings.forEach((booking) => {
-        const type = booking.cylinder?.cylinderType || "Unknown";
-        cylinderTypes[type] = (cylinderTypes[type] || 0) + (booking.quantity || 0);
-      });
-
-      if (Object.keys(cylinderTypes).length === 0) {
-        return `No cylinder bookings found for ${dateLabel}.`;
-      }
-
-      let response = `**Cylinder Types Sold on ${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}:**\n\n`;
-      Object.entries(cylinderTypes).forEach(([type, qty]) => {
-        response += `• ${type}: ${qty} cylinder(s)\n`;
-      });
-      return response;
-    }
-
-    // Detailed booking information for specific date
-    if (
-      lowerQuery.includes("details") ||
-      lowerQuery.includes("list all") ||
-      lowerQuery.includes("show all") ||
-      (targetDate && filteredBookings.length > 0)
-    ) {
-      if (filteredBookings.length === 0) {
-        return `No bookings found for ${dateLabel}.`;
-      }
-      let response = `**All Booking Details for ${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)} (${filteredBookings.length}):**\n\n`;
-      filteredBookings.slice(0, 10).forEach((booking, idx) => {
-        const createdAt = new Date(booking.createdAt || booking.created_at);
-        const time = createdAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-        const amount = (booking.cylinder?.price || 0) * (booking.quantity || 0);
-        response += `${idx + 1}. **${booking.customer?.username || "Unknown"}**\n   • Cylinder: ${booking.cylinder?.cylinderType || "N/A"}\n   • Quantity: ${booking.quantity || 0}\n   • Status: ${booking.status}\n   • Payment: ${booking.paymentStatus}\n   • Amount: ₹${amount.toLocaleString()}\n   • Time: ${time}\n\n`;
-      });
-      if (filteredBookings.length > 10) {
-        response += `\n...and ${filteredBookings.length - 10} more bookings.`;
-      }
-      return response;
+      return `**${dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}'s Booking Status Overview:**\n\n📋 Total Bookings: ${filteredBookings.length}\n⏳ Pending: ${statusCounts.pending}\n✅ Confirmed: ${statusCounts.confirmed}\n🚚 Delivered: ${statusCounts.delivered}\n\n**Payment Status:**\n💰 Paid: ${filteredBookings.filter((b) => b.paymentStatus === "paid").length}\n💳 Pending Payment: ${filteredBookings.filter((b) => b.paymentStatus === "pending").length}\n\n**Overall Stats:**\n• Stock Received: ${stats.stockReceived || 0} cylinders\n• Cylinders Delivered: ${stats.cylindersDelivered || 0}\n• Pending Returns: ${stats.pendingReturns || 0}\n• Returned Cylinders: ${stats.returnedCylinders || 0}`;
     }
 
     // Help
@@ -309,14 +301,14 @@ const AIBookingChatbot = ({ bookings, stats }) => {
       lowerQuery.includes("what can") ||
       lowerQuery.includes("how to")
     ) {
-      return `I can help you with:\n\n📊 **Booking Information:**\n• "How many bookings today?"\n• "Bookings on 15-01-2024" (any date)\n• "Show pending bookings"\n• "What's the status?"\n• "Details for yesterday"\n\n💰 **Payment Info:**\n• "Payment status"\n• "Amount collected"\n• "Pending payments"\n\n👥 **Customer Details:**\n• "List customers"\n• "Who booked today?"\n\n📦 **Products:**\n• "What cylinders were sold?"\n• "Cylinder types today"\n\nJust ask me anything about your bookings!`;
+      return `I can help you with:\n\n📊 **Booking Information:**\n• "How many bookings today?"\n• "Bookings on 15-01-2024" (any date)\n• "Show pending bookings"\n• "What's the status?"\n• "Details for yesterday"\n\n💰 **Payment Info:**\n• "Payment status"\n• "Amount collected"\n• "Pending payments"\n• "Revenue"\n\n👥 **Customer Details:**\n• "List customers"\n• "Who booked today?"\n• "Top customers"\n\n📦 **Products:**\n• "What cylinders were sold?"\n• "Cylinder types today"\n• "Cylinder breakdown"\n\nJust ask me anything about your bookings! I can also correct spelling mistakes.`;
     }
 
     // Default response
-    return `I understand you're asking about bookings. Here's what I know:\n\n📋 **Today's Bookings:** ${todayBookings.length}\n💰 **Stats Available:** Payment status, delivery status, customer info\n\nTry asking:\n• "How many bookings today?" or "Bookings on [date]"\n• "Show pending bookings"\n• "Payment summary"\n• "List customers"\n• "Details for yesterday"\n\nType "help" for more options!`;
+    return `I understand you're asking about bookings. Here's what I know:\n\n📋 **Today's Bookings:** ${todayBookings.length}\n💰 **Stats Available:** Payment status, delivery status, customer info, cylinder types\n\nTry asking:\n• "How many bookings today?" or "Bookings on [date]"\n• "Show pending bookings"\n• "Payment summary"\n• "What cylinder types did I sell?"\n• "Top customers"\n• "Details for yesterday"\n\nType "help" for more options!`;
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() || isTyping) return;
 
     const userMessage = input.trim();
@@ -324,27 +316,32 @@ const AIBookingChatbot = ({ bookings, stats }) => {
     setInput("");
     setIsTyping(true);
     
-    // Scroll to bottom when user sends message
     setTimeout(() => {
       scrollToBottom();
     }, 50);
 
-    // Simulate AI thinking
-    setTimeout(() => {
+    try {
+      // Use rule-based processing with all available data
       const botResponse = processQuery(userMessage);
       setMessages((prev) => [
         ...prev,
         { role: "bot", content: botResponse },
       ]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      setMessages((prev) => [
+        ...prev,
+        { role: "bot", content: "I'm having trouble processing that request. Could you try rephrasing your question?" },
+      ]);
+    } finally {
       setIsTyping(false);
-      // Scroll to bottom and refocus input after response
       setTimeout(() => {
         scrollToBottom();
         if (inputRef.current) {
           inputRef.current.focus();
         }
       }, 200);
-    }, 800);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -355,7 +352,6 @@ const AIBookingChatbot = ({ bookings, stats }) => {
   };
 
   const formatMessage = (content) => {
-    // Format markdown-like text
     const lines = content.split("\n");
     return lines.map((line, idx) => {
       if (line.trim().startsWith("**") && line.trim().endsWith("**")) {
@@ -403,7 +399,8 @@ const AIBookingChatbot = ({ bookings, stats }) => {
           <CardHeader className="bg-blue-600 text-white flex flex-row items-center justify-between pb-3">
             <div className="flex items-center gap-2">
               <Bot className="w-5 h-5" />
-              <CardTitle className="text-lg">Booking Assistant</CardTitle>
+              <CardTitle className="text-lg">AI Booking Assistant</CardTitle>
+              <Sparkles className="w-4 h-4 text-yellow-300" />
             </div>
             <Button
               variant="ghost"
@@ -475,7 +472,7 @@ const AIBookingChatbot = ({ bookings, stats }) => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={isTyping ? "Bot is typing..." : "Ask about today's bookings..."}
+                  placeholder={isTyping ? "Bot is typing..." : "Ask about your bookings..."}
                   className="flex-1"
                   autoFocus
                 />
@@ -496,4 +493,3 @@ const AIBookingChatbot = ({ bookings, stats }) => {
 };
 
 export default AIBookingChatbot;
-

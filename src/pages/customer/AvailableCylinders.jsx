@@ -26,6 +26,7 @@ export default function AvailableCylinders() {
   const [selectedCylinder, setSelectedCylinder] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
 
   useEffect(() => {
     dispatch(fetchAvailableCylinders());
@@ -34,6 +35,7 @@ export default function AvailableCylinders() {
   const handleBookCylinder = (cylinder) => {
     setSelectedCylinder(cylinder);
     setQuantity(1);
+    setPaymentMethod("cash");
     setIsDialogOpen(true);
   };
 
@@ -50,12 +52,14 @@ export default function AvailableCylinders() {
       await dispatch(bookCylinder({
         cylinderId: selectedCylinder._id,
         quantity: quantity,
+        paymentMethod: paymentMethod,
       })).unwrap();
       
-      toast.success("Cylinder booked successfully!");
+      toast.success("Cylinder booked successfully! Payment will be required after delivery.");
       setIsDialogOpen(false);
       setSelectedCylinder(null);
       setQuantity(1);
+      setPaymentMethod("cash");
     } catch (err) {
       toast.error(err || "Failed to book cylinder");
     }
@@ -195,6 +199,41 @@ export default function AvailableCylinders() {
                   <p className="text-sm text-gray-600 mb-1">Total Amount</p>
                   <p className="text-2xl font-bold text-green-600">
                     ₹{((quantity || 0) * (selectedCylinder.price || 0)).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Payment will be required after delivery
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payment-method">Payment Method</Label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="cash"
+                        checked={paymentMethod === "cash"}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="w-4 h-4"
+                      />
+                      <span>Cash (Pay on Delivery)</span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="online"
+                        checked={paymentMethod === "online"}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="w-4 h-4"
+                      />
+                      <span>Online (Pay after Delivery)</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {paymentMethod === "cash" 
+                      ? "You will pay in cash when the cylinder is delivered"
+                      : "You will pay online after the cylinder is delivered"}
                   </p>
                 </div>
                 {bookingError && (

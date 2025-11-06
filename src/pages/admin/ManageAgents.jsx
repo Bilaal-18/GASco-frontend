@@ -119,7 +119,7 @@ export default function ManageAgents() {
 
     try {
       if (editing) {
-        await axios.put(`/api/update/${editing._id}`, formData, {
+        await axios.put(`/api/updateAgent/${editing._id}`, formData, {
           headers: { Authorization: token },
         });
         toast.success("Agent updated successfully!");

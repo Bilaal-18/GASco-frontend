@@ -16,12 +16,21 @@ export default function ProfileImageUpload({
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {
+      // Reset input if no file selected
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       toast.error('Invalid file type. Please select a JPEG, PNG, GIF, or WebP image.');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
 
@@ -29,11 +38,20 @@ export default function ProfileImageUpload({
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error('File size too large. Maximum size is 5MB.');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
 
     // Create preview
     const reader = new FileReader();
+    reader.onerror = () => {
+      toast.error('Failed to read image file');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
     reader.onloadend = () => {
       setPreview(reader.result);
     };
@@ -41,7 +59,8 @@ export default function ProfileImageUpload({
   };
 
   const handleUpload = async () => {
-    if (!fileInputRef.current?.files[0]) {
+    const file = fileInputRef.current?.files[0];
+    if (!file) {
       toast.error('Please select an image first');
       return;
     }
@@ -49,48 +68,66 @@ export default function ProfileImageUpload({
     try {
       setUploading(true);
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        toast.error('Please login to upload images');
+        return;
+      }
+
       const formData = new FormData();
-      formData.append('image', fileInputRef.current.files[0]);
+      formData.append('image', file);
 
       // Upload image to Cloudinary
+      // Don't set Content-Type header - let browser set it with boundary
       const uploadResponse = await axios.post('/api/upload/profile-image', formData, {
         headers: {
           Authorization: token,
-          'Content-Type': 'multipart/form-data',
         },
       });
+
+      if (!uploadResponse.data || !uploadResponse.data.imageUrl) {
+        throw new Error('Invalid response from server');
+      }
 
       const imageUrl = uploadResponse.data.imageUrl;
 
       // Update user profile with image URL
-      if (updateEndpoint) {
+      if (updateEndpoint && userId) {
         const endpoint = updateEndpoint === '/api/account' 
           ? '/api/account' 
           : `${updateEndpoint}/${userId}`;
         
-        await axios.put(
-          endpoint,
-          { profilepic: imageUrl },
-          {
-            headers: { Authorization: token },
-          }
-        );
+        try {
+          await axios.put(
+            endpoint,
+            { profilepic: imageUrl },
+            {
+              headers: { Authorization: token },
+            }
+          );
+        } catch (updateError) {
+          console.error('Profile update error:', updateError);
+          toast.error(updateError.response?.data?.error || 'Image uploaded but failed to update profile');
+          // Still show success for upload even if profile update fails
+        }
       }
 
       toast.success('Profile picture updated successfully!');
       
-      if (onImageUploaded) {
-        onImageUploaded(imageUrl);
-      }
-
       // Clear preview and file input
       setPreview(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+
+      // Call callback after successful upload
+      if (onImageUploaded) {
+        await onImageUploaded(imageUrl);
+      }
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error.response?.data?.error || 'Failed to upload image');
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to upload image';
+      toast.error(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -101,6 +138,7 @@ export default function ProfileImageUpload({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    setUploading(false);
   };
 
   const displayImage = preview || currentImage;
@@ -108,7 +146,7 @@ export default function ProfileImageUpload({
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="relative">
-        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100 flex items-center justify-center">
+        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200 bg-gray-100 flex items-center justify-center shadow-lg">
           {displayImage ? (
             <img
               src={displayImage}
@@ -121,45 +159,50 @@ export default function ProfileImageUpload({
             </div>
           )}
         </div>
+
+        {/* Cancel button for preview */}
         {preview && (
           <button
             onClick={handleCancel}
-            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg z-10"
+            title="Cancel"
           >
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      <div className="flex flex-col gap-2 items-center">
+      <div className="flex flex-col gap-2 items-center w-full">
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
           onChange={handleFileSelect}
           className="hidden"
           id="profile-image-input"
+          disabled={uploading}
         />
-        <label htmlFor="profile-image-input">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="cursor-pointer"
-            disabled={uploading}
-          >
-            <Camera className="w-4 h-4 mr-2" />
-            {currentImage ? 'Change Photo' : 'Upload Photo'}
-          </Button>
-        </label>
-
-        {preview && (
-          <div className="flex gap-2">
+        
+        {!preview ? (
+          <label htmlFor="profile-image-input" className="w-full cursor-pointer">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full pointer-events-none"
+              disabled={uploading}
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              {currentImage ? 'Change Photo' : 'Upload Photo'}
+            </Button>
+          </label>
+        ) : (
+          <div className="flex gap-2 w-full">
             <Button
               onClick={handleUpload}
               size="sm"
               disabled={uploading}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 flex-1 text-white"
             >
               {uploading ? (
                 <>
@@ -167,7 +210,10 @@ export default function ProfileImageUpload({
                   Uploading...
                 </>
               ) : (
-                'Save Photo'
+                <>
+                  <Camera className="w-4 h-4 mr-2" />
+                  Save Photo
+                </>
               )}
             </Button>
             <Button
@@ -175,6 +221,7 @@ export default function ProfileImageUpload({
               variant="outline"
               size="sm"
               disabled={uploading}
+              className="flex-1"
             >
               Cancel
             </Button>

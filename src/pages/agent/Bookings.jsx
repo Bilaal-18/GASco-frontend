@@ -242,7 +242,7 @@ export default function Bookings() {
     return (
       <div className="flex bg-gray-50 min-h-screen">
         <AgentSidebar />
-        <div className="flex-1 flex justify-center items-center">
+        <div className="flex-1 ml-64 flex justify-center items-center">
           <div className="text-gray-500">Loading bookings...</div>
         </div>
       </div>
@@ -262,7 +262,7 @@ export default function Bookings() {
   return (
     <div className="flex bg-gray-50 min-h-screen">
       <AgentSidebar />
-      <div className="flex-1 p-8">
+      <div className="flex-1 ml-64 p-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-semibold text-gray-800 flex items-center gap-2">
             <FileText className="w-8 h-8 text-blue-600" />
@@ -388,12 +388,20 @@ export default function Bookings() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
                           <CardTitle className="text-xl">
                             {booking.customer?.username || booking.customer?.businessName || "Unknown Customer"}
                           </CardTitle>
                           {getStatusBadge(booking.status)}
+                          <Badge variant="outline" className={booking.paymentMethod === "online" ? "bg-purple-50 text-purple-700 border-purple-300" : "bg-gray-50 text-gray-700 border-gray-300"}>
+                            {booking.paymentMethod === "online" ? "Online" : "Cash"}
+                          </Badge>
                           {getPaymentBadge(booking.paymentStatus)}
+                          {booking.status === "delivered" && booking.paymentStatus === "pending" && booking.paymentMethod === "cash" && (
+                            <Badge className="bg-orange-500 text-white">
+                              Collect Cash
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
                           <span className="flex items-center gap-1">
@@ -472,16 +480,30 @@ export default function Bookings() {
                             </span>
                           </div>
                           
+                          {/* Payment Method Display */}
+                          <div className="flex justify-between items-center p-2 border rounded">
+                            <span className="text-gray-600">Payment Method:</span>
+                            <Badge variant="outline" className={booking.paymentMethod === "online" ? "bg-purple-50 text-purple-700 border-purple-300" : "bg-gray-50 text-gray-700 border-gray-300"}>
+                              {booking.paymentMethod === "online" ? "Online" : "Cash"}
+                            </Badge>
+                          </div>
+
                           {/* Payment Status Update */}
                           <div className="flex justify-between items-center p-2 border rounded">
                             <span className="text-gray-600">Payment Status:</span>
                             <div className="flex items-center gap-2">
                               {getPaymentBadge(booking.paymentStatus)}
+                              {booking.status === "delivered" && booking.paymentStatus === "pending" && booking.paymentMethod === "cash" && (
+                                <span className="text-xs text-orange-600 font-medium">Collect Cash</span>
+                              )}
+                              {booking.status === "delivered" && booking.paymentStatus === "pending" && booking.paymentMethod === "online" && (
+                                <span className="text-xs text-blue-600 font-medium">Customer will pay online</span>
+                              )}
                               <select
                                 value={booking.paymentStatus}
                                 onChange={(e) => handlePaymentStatusChange(booking._id, e.target.value)}
-                                disabled={updatingBooking === booking._id}
-                                className="px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                disabled={updatingBooking === booking._id || (booking.status !== "delivered" && booking.paymentStatus === "pending")}
+                                className="px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <option value="pending">Pending</option>
                                 <option value="paid">Paid</option>
@@ -626,4 +648,5 @@ export default function Bookings() {
     </div>
   );
 }
+
 

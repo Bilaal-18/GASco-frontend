@@ -43,6 +43,18 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
       return;
     }
 
+    // Check if booking is delivered - payment only allowed after delivery
+    if (booking.status !== 'delivered') {
+      toast.error('Payment can only be made after the cylinder is delivered. Please wait for delivery confirmation.');
+      return;
+    }
+
+    // Check if payment method is online
+    if (booking.paymentMethod !== 'online') {
+      toast.error('This booking is set for cash payment. Please contact your agent for cash payment.');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -116,6 +128,11 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
   // Calculate total amount
   const totalAmount =
     (booking.quantity || 0) * (booking.cylinder?.price || 0);
+
+  // Only show payment button if booking is delivered and payment method is online
+  if (booking.status !== 'delivered' || booking.paymentMethod !== 'online') {
+    return null;
+  }
 
   return (
     <Button

@@ -18,41 +18,14 @@ export const fetchCustomerBookings = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('token');
-      // First get user role to determine which endpoint to use
-      const accountRes = await axios.get('/api/account', {
+      const response = await axios.get('/api/customerBookings', {
         headers: { Authorization: token },
       });
-      const userRole = accountRes.data.role;
-      
-      let bookings = [];
-      
-      // Use customer-specific endpoint for customers, allBookings for admin/agent
-      if (userRole === 'customer') {
-        const response = await axios.get('/api/customerBookings', {
-          headers: { Authorization: token },
-        });
-        bookings = response.data?.bookings || response.data || [];
-      } else {
-        // For admin/agent, use allBookings and filter
-        const customerId = accountRes.data._id;
-        const response = await axios.get('/api/allBookings', {
-          headers: { Authorization: token },
-        });
-        const allBookings = response.data?.listAll || response.data || [];
-        
-        // Filter bookings for this customer
-        bookings = Array.isArray(allBookings) 
-          ? allBookings.filter(booking => {
-              const bookingCustomerId = booking.customer?._id || booking.customer;
-              return bookingCustomerId?.toString() === customerId?.toString();
-            })
-          : [];
-      }
-      
-      return bookings;
+      // Backend returns { message, bookings }, so extract bookings array
+      return response.data?.bookings || response.data || [];
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.error || error.response?.data?.message || 'Failed to fetch bookings'
+        error.response?.data?.error || 'Failed to fetch bookings'
       );
     }
   }
@@ -64,30 +37,12 @@ export const fetchBookingById = createAsyncThunk(
   async (bookingId, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('token');
-      
-      // Check user role first
-      const accountRes = await axios.get('/api/account', {
-        headers: { Authorization: token },
-      }).catch(() => ({ data: { role: 'customer' } }));
-      
-      const userRole = accountRes.data?.role;
-      
-      // SingleBooking endpoint only allows admin/agent
-      if (userRole === 'customer') {
-        // Customers can't access SingleBooking endpoint
-        // They can only update/delete their own bookings, but can't view them via this endpoint
-        return rejectWithValue('Customer bookings require backend support. Please contact administrator.');
-      }
-      
       const response = await axios.get(`/api/SingleBooking/${bookingId}`, {
         headers: { Authorization: token },
       });
+      // Backend returns { message, booking }, so extract booking object
       return response.data?.booking || response.data;
     } catch (error) {
-      // Check if it's an authorization error for customers
-      if (error.response?.status === 403 || error.response?.status === 401) {
-        return rejectWithValue('Access denied. Customer booking viewing requires backend support.');
-      }
       return rejectWithValue(
         error.response?.data?.error || 'Failed to fetch booking'
       );
@@ -101,10 +56,10 @@ export const createBooking = createAsyncThunk(
   async (bookingData, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post('/api/newBooking', bookingData, {
+      const response = await axios.post('/api/customer/bookings', bookingData, {
         headers: { Authorization: token },
       });
-      return response.data?.booking || response.data;
+      return response.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.error || 'Failed to create booking'
@@ -126,6 +81,7 @@ export const updateBooking = createAsyncThunk(
           headers: { Authorization: token },
         }
       );
+      // Backend returns { message, booking }, so extract booking object
       return response.data?.booking || response.data;
     } catch (error) {
       return rejectWithValue(
@@ -138,7 +94,7 @@ export const updateBooking = createAsyncThunk(
 // Cancel booking
 export const cancelBooking = createAsyncThunk(
   'customerBookings/cancelBooking',
-  async (bookingId, { rejectWithValue, dispatch }) => {
+  async (bookingId, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.patch(
@@ -148,10 +104,7 @@ export const cancelBooking = createAsyncThunk(
           headers: { Authorization: token },
         }
       );
-      
-      // Refresh bookings list after cancellation
-      dispatch(fetchCustomerBookings());
-      
+      // Backend returns { message, booking }, so extract booking object
       return response.data?.booking || response.data;
     } catch (error) {
       return rejectWithValue(
@@ -267,28 +220,7 @@ const customerBookingsSlice = createSlice({
       .addCase(cancelBooking.rejected, (state, action) => {
         state.updateLoading = false;
         state.updateError = action.payload;
-      })
-      // Handle booking created from dashboard (bookCylinder)
-      // Must be after all addCase calls
-      .addMatcher(
-        (action) => action.type === 'customerDashboard/bookCylinder/fulfilled',
-        (state, action) => {
-          // Add the booking to the list if it's not already there
-          const booking = action.payload;
-          if (booking && booking._id) {
-            const existingIndex = state.bookings.findIndex(
-              (b) => b._id === booking._id
-            );
-            if (existingIndex === -1) {
-              // Add to the beginning of the list
-              state.bookings.unshift(booking);
-            } else {
-              // Update existing booking
-              state.bookings[existingIndex] = booking;
-            }
-          }
-        }
-      );
+      });
   },
 });
 

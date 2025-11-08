@@ -1,11 +1,12 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Home, User, Package, Users, FileText, Wallet, DollarSign, ShoppingCart, TrendingUp, Download, Calendar, LogOut } from "lucide-react";
+import { Home, User, Package, Users, FileText, Wallet, DollarSign, ShoppingCart, TrendingUp, Download, Calendar, LogOut, BarChart3, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import axios from "@/config/config";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import CustomDatePicker from "@/components/ui/DatePicker";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
@@ -21,8 +22,10 @@ const AgentSidebar = () => {
   const [bookings, setBookings] = useState([]);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportType, setReportType] = useState("daily");
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
   const [generating, setGenerating] = useState(false);
   const token = localStorage.getItem("token");
 
@@ -98,7 +101,7 @@ const AgentSidebar = () => {
 
     setGenerating(true);
     try {
-      const selectedDateObj = new Date(selectedDate);
+      const selectedDateObj = selectedDate instanceof Date ? selectedDate : new Date(selectedDate);
       const selectedDateStr = selectedDateObj.toLocaleDateString('en-GB', { 
         day: '2-digit', 
         month: '2-digit', 
@@ -191,6 +194,110 @@ const AgentSidebar = () => {
     }
   };
 
+  // Generate Date Range Report
+  const generateDateRangeReport = () => {
+    if (!startDate || !endDate) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
+
+    const startDateObj = startDate instanceof Date ? startDate : new Date(startDate);
+    const endDateObj = endDate instanceof Date ? endDate : new Date(endDate);
+
+    if (startDateObj > endDateObj) {
+      toast.error("Start date cannot be after end date");
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      endDateObj.setHours(23, 59, 59, 999); // Include entire end date
+
+      // Filter bookings for date range
+      const rangeBookings = bookings.filter((booking) => {
+        const bookingDate = new Date(booking.createdAt);
+        return bookingDate >= startDateObj && bookingDate <= endDateObj;
+      });
+
+      if (rangeBookings.length === 0) {
+        toast.warning("No cylinders sold in the selected date range");
+        setGenerating(false);
+        return;
+      }
+
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      
+      // Header
+      doc.setFontSize(18);
+      doc.text("GasCo Sales Report (Date Range)", 105, 20, { align: "center" });
+      doc.setFontSize(12);
+      doc.text(`From: ${startDateObj.toLocaleDateString('en-GB')} To: ${endDateObj.toLocaleDateString('en-GB')}`, 105, 28, { align: "center" });
+
+      // Summary
+      const totalCylinders = rangeBookings.reduce((sum, b) => sum + (b.quantity || 0), 0);
+      const totalAmount = rangeBookings.reduce((sum, b) => {
+        return sum + ((b.cylinder?.price || 0) * (b.quantity || 0));
+      }, 0);
+      const paidAmount = rangeBookings
+        .filter(b => b.paymentStatus === "paid")
+        .reduce((sum, b) => {
+          return sum + ((b.cylinder?.price || 0) * (b.quantity || 0));
+        }, 0);
+
+      const summaryData = [
+        ["Total Cylinders Sold", totalCylinders],
+        ["Total Sales Amount (₹)", totalAmount.toFixed(2)],
+        ["Amount Received (₹)", paidAmount.toFixed(2)],
+        ["Pending Amount (₹)", (totalAmount - paidAmount).toFixed(2)],
+        ["Total Transactions", rangeBookings.length],
+      ];
+
+      autoTable(doc, {
+        body: summaryData,
+        startY: 35,
+        theme: "grid",
+        styles: { fontSize: 10 },
+      });
+
+      // Sales Details
+      const startY = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(14);
+      doc.text("Sales Details", 14, startY);
+
+      const tableData = rangeBookings.map((b) => [
+        new Date(b.createdAt).toLocaleDateString('en-GB'),
+        b.customer?.username || b.customer?.businessName || "N/A",
+        b.cylinder?.cylinderName || b.cylinder?.cylinderType || "N/A",
+        b.quantity || 0,
+        `₹${(b.cylinder?.price || 0).toFixed(2)}`,
+        `₹${((b.cylinder?.price || 0) * (b.quantity || 0)).toFixed(2)}`,
+        b.paymentStatus === "paid" ? "Paid" : "Pending",
+      ]);
+
+      autoTable(doc, {
+        head: [["Date", "Customer", "Cylinder", "Qty", "Price", "Total", "Status"]],
+        body: tableData,
+        startY: startY + 5,
+        theme: "striped",
+        styles: { fontSize: 8 },
+      });
+
+      doc.setFontSize(10);
+      doc.text("Generated by GasCo Agent Panel", 105, doc.lastAutoTable.finalY + 10, { align: "center" });
+      
+      const startDateStr = startDateObj.toISOString().split('T')[0];
+      const endDateStr = endDateObj.toISOString().split('T')[0];
+      doc.save(`Sales_Report_${startDateStr}_to_${endDateStr}.pdf`);
+      toast.success("Date range report generated successfully!");
+      setReportDialogOpen(false);
+    } catch (err) {
+      console.error("Error generating date range report:", err);
+      toast.error("Failed to generate date range report");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   // Generate Monthly Report
   const generateMonthlyReport = () => {
     if (!selectedMonth) {
@@ -200,15 +307,15 @@ const AgentSidebar = () => {
 
     setGenerating(true);
     try {
-      const [year, month] = selectedMonth.split('-');
-      const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+      const monthDate = selectedMonth instanceof Date ? selectedMonth : new Date(selectedMonth);
+      const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
       // Filter bookings for selected month
       const monthlyBookings = bookings.filter((booking) => {
         const bookingDate = new Date(booking.createdAt);
         return (
-          bookingDate.getMonth() === parseInt(month) - 1 &&
-          bookingDate.getFullYear() === parseInt(year)
+          bookingDate.getMonth() === monthDate.getMonth() &&
+          bookingDate.getFullYear() === monthDate.getFullYear()
         );
       });
 
@@ -338,6 +445,9 @@ const AgentSidebar = () => {
         <NavLink to="/agent/pay-admin" className="flex items-center gap-2 hover:bg-gray-800 p-2 rounded">
           <DollarSign size={18}/> Pay Admin
         </NavLink>
+        <NavLink to="/agent/forecast" className="flex items-center gap-2 hover:bg-gray-800 p-2 rounded">
+          <BarChart3 size={18}/> Demand Forecast
+        </NavLink>
         <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
           <DialogTrigger asChild>
             <button className="flex items-center gap-2 hover:bg-gray-800 p-2 rounded w-full text-left">
@@ -354,7 +464,7 @@ const AgentSidebar = () => {
             <div className="space-y-4 mt-4">
               <div>
                 <Label className="mb-2 block">Report Type</Label>
-                <div className="flex gap-4">
+                <div className="flex gap-4 flex-wrap">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
@@ -377,36 +487,69 @@ const AgentSidebar = () => {
                     />
                     <span>Monthly Report</span>
                   </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="reportType"
+                      value="range"
+                      checked={reportType === "range"}
+                      onChange={(e) => setReportType(e.target.value)}
+                      className="w-4 h-4"
+                    />
+                    <span>Date Range</span>
+                  </label>
                 </div>
               </div>
 
               {reportType === "daily" ? (
                 <div>
-                  <Label htmlFor="dailyDate" className="mb-2 block">
-                    <Calendar size={16} className="inline mr-2" />
-                    Select Date
-                  </Label>
-                  <Input
-                    id="dailyDate"
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    max={new Date().toISOString().split('T')[0]}
+                  <CustomDatePicker
+                    label="Select Date"
+                    selected={selectedDate}
+                    onChange={(date) => setSelectedDate(date)}
+                    maxDate={new Date()}
+                    placeholderText="Select date for daily report"
+                    dateFormat="MMMM d, yyyy"
+                    className="w-full"
+                  />
+                </div>
+              ) : reportType === "monthly" ? (
+                <div>
+                  <CustomDatePicker
+                    label="Select Month"
+                    selected={selectedMonth}
+                    onChange={(date) => setSelectedMonth(date)}
+                    maxDate={new Date()}
+                    showMonthYearPicker={true}
+                    placeholderText="Select month and year"
+                    dateFormat="MMMM yyyy"
                     className="w-full"
                   />
                 </div>
               ) : (
-                <div>
-                  <Label htmlFor="monthlyDate" className="mb-2 block">
-                    <Calendar size={16} className="inline mr-2" />
-                    Select Month
-                  </Label>
-                  <Input
-                    id="monthlyDate"
-                    type="month"
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                    max={new Date().toISOString().slice(0, 7)}
+                <div className="space-y-3">
+                  <CustomDatePicker
+                    label="Start Date"
+                    selected={startDate}
+                    onChange={(date) => {
+                      setStartDate(date);
+                      if (date && endDate && date > endDate) {
+                        setEndDate(date);
+                      }
+                    }}
+                    maxDate={endDate || new Date()}
+                    placeholderText="Select start date"
+                    dateFormat="MMMM d, yyyy"
+                    className="w-full"
+                  />
+                  <CustomDatePicker
+                    label="End Date"
+                    selected={endDate}
+                    onChange={(date) => setEndDate(date)}
+                    minDate={startDate}
+                    maxDate={new Date()}
+                    placeholderText="Select end date"
+                    dateFormat="MMMM d, yyyy"
                     className="w-full"
                   />
                 </div>
@@ -415,18 +558,32 @@ const AgentSidebar = () => {
               <DialogFooter>
                 <Button
                   variant="outline"
-                  onClick={() => setReportDialogOpen(false)}
+                  onClick={() => {
+                    setReportDialogOpen(false);
+                    setReportType("daily");
+                  }}
                   disabled={generating}
                 >
                   Cancel
                 </Button>
                 <Button
-                  onClick={reportType === "daily" ? generateDailyReport : generateMonthlyReport}
+                  onClick={() => {
+                    if (reportType === "daily") {
+                      generateDailyReport();
+                    } else if (reportType === "monthly") {
+                      generateMonthlyReport();
+                    } else {
+                      generateDateRangeReport();
+                    }
+                  }}
                   disabled={generating}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   {generating ? (
-                    <>Generating...</>
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
                   ) : (
                     <>
                       <Download size={16} className="mr-2" />

@@ -21,6 +21,7 @@ import Customers from "./pages/agent/Customers";
 import Bookings from "./pages/agent/Bookings";
 import Payments from "./pages/agent/Payments";
 import AgentPayments from "./pages/agent/AgentPayments";
+import Forecast from "./pages/agent/Forecast";
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import CustomerProfile from "./pages/customer/CustomerProfile";
 import CustomerBookings from "./pages/customer/CustomerBookings";
@@ -55,6 +56,7 @@ export default function App() {
             <Route path="/agent/bookings" element={<PrivateRoute><Bookings/></PrivateRoute>}/>
             <Route path="/agent/payments" element={<PrivateRoute><Payments/></PrivateRoute>}/>
             <Route path="/agent/pay-admin" element={<PrivateRoute><AgentPayments/></PrivateRoute>}/>
+            <Route path="/agent/forecast" element={<PrivateRoute><Forecast/></PrivateRoute>}/>
             
             <Route path="/customer/dashboard" element={<PrivateRoute><CustomerDashboard/></PrivateRoute>}/>
             <Route path="/customer/profile" element={<PrivateRoute><CustomerProfile/></PrivateRoute>}/>

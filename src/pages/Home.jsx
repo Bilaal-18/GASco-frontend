@@ -67,7 +67,7 @@ export default function Home() {
               className="text-center max-w-4xl mx-auto"
             >
               <h1 className="text-6xl sm:text-7xl font-bold text-slate-800 mb-6 leading-tight">
-                Welcome to <span className="text-blue-600">GASCo</span>
+                Welcome to <span className="text-blue-600">GASco</span>
               </h1>
               <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
                 Your trusted partner for efficient gas distribution management. 

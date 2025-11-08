@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   FileText, 
   MapPin, 
   Package, 
@@ -17,12 +17,15 @@ import {
   Clock,
   Search,
   Filter,
-  RotateCcw
+  RotateCcw,
+  Plus
 } from "lucide-react";
 import AgentSidebar from "@/components/layout/AgentSidebar";
 import axios from "@/config/config";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import CustomDatePicker from "@/components/ui/DatePicker";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -57,12 +60,91 @@ export default function Bookings() {
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [selectedDate, setSelectedDate] = useState(new Date()); // Default to today
   const [updatingBooking, setUpdatingBooking] = useState(null);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [availableStocks, setAvailableStocks] = useState([]);
+  const [bookingFormData, setBookingFormData] = useState({
+    customerId: "",
+    cylinderId: "",
+    quantity: 1,
+    paymentMethod: "cash",
+    deliveryDate: null,
+  });
+  const [creatingBooking, setCreatingBooking] = useState(false);
   const token = localStorage.getItem("token");
+  const [agentId, setAgentId] = useState(null);
 
   useEffect(() => {
     fetchBookings();
+    fetchAgentId();
   }, [token]);
+
+  const fetchAgentId = async () => {
+    try {
+      const res = await axios.get("/api/account", {
+        headers: { Authorization: token },
+      });
+      if (res.data && res.data._id) {
+        setAgentId(res.data._id);
+      }
+    } catch (err) {
+      console.error("Error fetching agent ID:", err);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    if (!agentId) return;
+    try {
+      console.log(`Fetching customers for agent: ${agentId}`);
+      const res = await axios.get(`/api/agentCustomers/${agentId}`, {
+        headers: { Authorization: token },
+      });
+      const customersData = res.data?.customers || res.data || [];
+      const customersArray = Array.isArray(customersData) ? customersData : [];
+      
+      console.log(`Fetched ${customersArray.length} customers for agent ${agentId}`);
+      console.log("Customers:", customersArray.map(c => ({ id: c._id, name: c.username || c.businessname })));
+      
+      // Filter to only show customers that have an agent assigned (should already be filtered by backend, but double-check)
+      const validCustomers = customersArray.filter(customer => customer._id);
+      setCustomers(validCustomers);
+      
+      if (validCustomers.length === 0) {
+        console.warn("No customers found for this agent");
+        toast.warning("No customers assigned to you. Please contact admin to assign customers.");
+      }
+    } catch (err) {
+      console.error("Error fetching customers:", err);
+      console.error("Error response:", err.response?.data);
+      toast.error("Failed to fetch customers. Please refresh the page.");
+    }
+  };
+
+  const fetchAvailableStocks = async () => {
+    if (!agentId) return;
+    try {
+      const res = await axios.get(`/api/ownStock/${agentId}`, {
+        headers: { Authorization: token },
+      });
+      const stocksData = res.data?.Ownstock || res.data?.ownStock || res.data || [];
+      const stocksArray = Array.isArray(stocksData) ? stocksData : [];
+      // Filter stocks with quantity > 0
+      const availableStocks = stocksArray.filter(stock => stock.quantity > 0);
+      setAvailableStocks(availableStocks);
+    } catch (err) {
+      console.error("Error fetching available stocks:", err);
+      toast.error("Failed to fetch available stocks");
+    }
+  };
+
+  useEffect(() => {
+    if (agentId && bookingDialogOpen) {
+      fetchCustomers();
+      fetchAvailableStocks();
+    }
+  }, [agentId, bookingDialogOpen, token]);
 
   const fetchBookings = async () => {
     if (!token) {
@@ -77,7 +159,7 @@ export default function Bookings() {
         headers: { Authorization: token },
       });
       
-      console.log("Bookings API Response:", res.data); // Debug log
+      console.log("Bookings API Response:", res.data); 
       
       // Handle different response formats
       const bookingsData = res.data.bookings || res.data || [];
@@ -115,6 +197,34 @@ export default function Bookings() {
   useEffect(() => {
     let filtered = bookings;
 
+    // Apply date filter (filter by booking date - createdAt or deliveryDate)
+    if (selectedDate) {
+      const selectedDateObj = selectedDate instanceof Date ? selectedDate : new Date(selectedDate);
+      const startOfDay = new Date(selectedDateObj);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDateObj);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      filtered = filtered.filter((booking) => {
+        const bookingDate = new Date(booking.createdAt);
+        // Check deliveryDate if available (for future bookings)
+        const deliveryDate = booking.deliveryDate ? new Date(booking.deliveryDate) : null;
+        
+        // Normalize dates to compare only the date part (ignore time)
+        const bookingDateOnly = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate());
+        const deliveryDateOnly = deliveryDate ? new Date(deliveryDate.getFullYear(), deliveryDate.getMonth(), deliveryDate.getDate()) : null;
+        const selectedDateOnly = new Date(startOfDay.getFullYear(), startOfDay.getMonth(), startOfDay.getDate());
+        
+        // Match if:
+        // 1. Booking was created on selected date, OR
+        // 2. Booking has delivery date on selected date (for future bookings)
+        const matchesCreatedDate = bookingDateOnly.getTime() === selectedDateOnly.getTime();
+        const matchesDeliveryDate = deliveryDateOnly && deliveryDateOnly.getTime() === selectedDateOnly.getTime();
+        
+        return matchesCreatedDate || matchesDeliveryDate;
+      });
+    }
+
     // Apply search filter
     if (search) {
       filtered = filtered.filter((booking) => {
@@ -141,7 +251,7 @@ export default function Bookings() {
     }
 
     setFilteredBookings(filtered);
-  }, [search, statusFilter, paymentFilter, bookings]);
+  }, [search, statusFilter, paymentFilter, selectedDate, bookings]);
 
   const handleViewMap = (booking) => {
     setSelectedBooking(booking);
@@ -180,6 +290,75 @@ export default function Bookings() {
     // Check if backend supports isReturned update
     // For now, we'll try to update it along with status
     handleUpdateBooking(bookingId, { isReturned: !currentStatus });
+  };
+
+  const handleCreateBooking = async () => {
+    if (!bookingFormData.customerId || !bookingFormData.cylinderId || bookingFormData.quantity <= 0) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Check stock availability
+    const selectedStock = availableStocks.find(s => s.cylinderId._id === bookingFormData.cylinderId);
+    if (!selectedStock || selectedStock.quantity < bookingFormData.quantity) {
+      toast.error("Insufficient stock available");
+      return;
+    }
+
+    try {
+      setCreatingBooking(true);
+      
+      // Validate customerId is selected
+      if (!bookingFormData.customerId) {
+        toast.error("Please select a customer");
+        setCreatingBooking(false);
+        return;
+      }
+      
+      const bookingData = {
+        customerId: bookingFormData.customerId,
+        cylinderId: bookingFormData.cylinderId,
+        quantity: parseInt(bookingFormData.quantity),
+        paymentMethod: bookingFormData.paymentMethod,
+        deliveryDate: bookingFormData.deliveryDate
+          ? bookingFormData.deliveryDate.toISOString().split('T')[0]
+          : undefined,
+      };
+
+      console.log("Creating booking with data:", bookingData);
+
+      const res = await axios.post("/api/newBooking", bookingData, {
+        headers: { Authorization: token },
+      });
+
+      toast.success(res.data.message || "Booking created successfully!");
+      
+      // Reset form and close dialog
+      setBookingFormData({
+        customerId: "",
+        cylinderId: "",
+        quantity: 1,
+        paymentMethod: "cash",
+        deliveryDate: null,
+      });
+      setBookingDialogOpen(false);
+
+      // Refresh bookings list and stock
+      await fetchBookings();
+      await fetchAvailableStocks(); // Refresh stock after booking
+    } catch (err) {
+      console.error("Error creating booking:", err);
+      console.error("Error response:", err?.response?.data);
+      const errorMessage = err?.response?.data?.error || "Failed to create booking";
+      toast.error(errorMessage);
+      
+      // If customer doesn't have agent assigned, refresh customer list
+      if (errorMessage.includes("agent assigned") || errorMessage.includes("not assigned to you")) {
+        await fetchCustomers();
+      }
+    } finally {
+      setCreatingBooking(false);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -249,35 +428,90 @@ export default function Bookings() {
     );
   }
 
-  const totalRevenue = bookings
+  // Calculate stats based on filtered bookings (respects date filter)
+  const totalRevenue = filteredBookings
     .filter((b) => b.paymentStatus === "paid")
     .reduce((sum, b) => sum + calculateTotalAmount(b), 0);
 
-  const pendingRevenue = bookings
+  const pendingRevenue = filteredBookings
     .filter((b) => b.paymentStatus === "pending")
     .reduce((sum, b) => sum + calculateTotalAmount(b), 0);
 
-  const returnedCylindersCount = bookings.filter((b) => b.isReturned === true).length;
+  const returnedCylindersCount = filteredBookings.filter((b) => b.isReturned === true).length;
+  
+  const deliveredCount = filteredBookings.filter((b) => b.status === "delivered").length;
 
   return (
     <div className="flex bg-gray-50 min-h-screen">
       <AgentSidebar />
       <div className="flex-1 ml-64 p-8">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-semibold text-gray-800 flex items-center gap-2">
-            <FileText className="w-8 h-8 text-blue-600" />
-            Bookings
-          </h1>
+          <div>
+            <h1 className="text-3xl font-semibold text-gray-800 flex items-center gap-2">
+              <FileText className="w-8 h-8 text-blue-600" />
+              Bookings
+            </h1>
+            {selectedDate && (
+              <p className="text-sm text-gray-600 mt-1">
+                Showing bookings for {selectedDate instanceof Date ? selectedDate.toLocaleDateString("en-US", { 
+                  weekday: "long",
+                  year: "numeric", 
+                  month: "long", 
+                  day: "numeric" 
+                }) : new Date(selectedDate).toLocaleDateString()}
+                {selectedDate instanceof Date && selectedDate > new Date() && (
+                  <span className="ml-2 text-blue-600 font-semibold">(Future Date - Showing Scheduled Deliveries)</span>
+                )}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setBookingDialogOpen(true)}
+              variant="default"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Book for Customer
+            </Button>
+            <Button
+              onClick={fetchBookings}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <RotateCcw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Based on Filtered Bookings */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Bookings</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">
+                {selectedDate 
+                  ? selectedDate instanceof Date && selectedDate > new Date()
+                    ? "Scheduled Bookings (Future)"
+                    : "Bookings (Selected Date)"
+                  : "Total Bookings"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-blue-600">{bookings.length}</p>
+              <p className="text-3xl font-bold text-blue-600">{filteredBookings.length}</p>
+              {selectedDate && bookings.length > filteredBookings.length && (
+                <p className="text-xs text-gray-500 mt-1">
+                  of {bookings.length} total
+                </p>
+              )}
+              {selectedDate && selectedDate instanceof Date && selectedDate > new Date() && (
+                <p className="text-xs text-blue-600 mt-1 font-semibold">
+                  Scheduled deliveries
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -285,17 +519,27 @@ export default function Bookings() {
               <CardTitle className="text-sm font-medium text-gray-600">Delivered</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-green-600">
-                {bookings.filter((b) => b.status === "delivered").length}
-              </p>
+              <p className="text-3xl font-bold text-green-600">{deliveredCount}</p>
+              {selectedDate && (
+                <p className="text-xs text-gray-500 mt-1">
+                  for selected date
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">
+                {selectedDate ? "Revenue (Selected Date)" : "Total Revenue"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-600">₹{totalRevenue.toLocaleString()}</p>
+              {selectedDate && (
+                <p className="text-xs text-gray-500 mt-1">
+                  paid bookings
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -304,6 +548,11 @@ export default function Bookings() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-orange-600">₹{pendingRevenue.toLocaleString()}</p>
+              {selectedDate && (
+                <p className="text-xs text-gray-500 mt-1">
+                  for selected date
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -312,6 +561,11 @@ export default function Bookings() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-purple-600">{returnedCylindersCount}</p>
+              {selectedDate && (
+                <p className="text-xs text-gray-500 mt-1">
+                  for selected date
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -319,44 +573,122 @@ export default function Bookings() {
         {/* Filters */}
         <Card className="mb-6">
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  placeholder="Search bookings..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
+            <div className="space-y-4">
+              {/* Date Filter - Prominent */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                <div className="md:col-span-2 lg:col-span-1">
+                  <CustomDatePicker
+                    label="Filter by Date"
+                    selected={selectedDate}
+                    onChange={(date) => setSelectedDate(date)}
+                    placeholderText="Select date to view bookings"
+                    dateFormat="MMMM d, yyyy"
+                    className="w-full"
+                  />
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedDate(new Date())}
+                      className="text-xs"
+                    >
+                      Today
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const yesterday = new Date();
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        setSelectedDate(yesterday);
+                      }}
+                      className="text-xs"
+                    >
+                      Yesterday
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const tomorrow = new Date();
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        setSelectedDate(tomorrow);
+                      }}
+                      className="text-xs bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                    >
+                      Tomorrow
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedDate(null)}
+                      className="text-xs"
+                    >
+                      All Dates
+                    </Button>
+                  </div>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    placeholder="Search bookings..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-gray-400" />
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-gray-400" />
+                  <select
+                    value={paymentFilter}
+                    onChange={(e) => setPaymentFilter(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Payments</option>
+                    <option value="paid">Paid</option>
+                    <option value="pending">Pending</option>
+                  </select>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-400" />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-gray-400" />
-                <select
-                  value={paymentFilter}
-                  onChange={(e) => setPaymentFilter(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Payments</option>
-                  <option value="paid">Paid</option>
-                  <option value="pending">Pending</option>
-                </select>
-              </div>
-              <div className="text-sm text-gray-500 flex items-center">
-                Showing {filteredBookings.length} of {bookings.length} bookings
+              <div className="flex items-center justify-between pt-2 border-t">
+                <div className="text-sm text-gray-500">
+                  Showing <span className="font-semibold text-gray-700">{filteredBookings.length}</span> of <span className="font-semibold text-gray-700">{bookings.length}</span> bookings
+                  {selectedDate && (
+                    <span className="ml-2 text-blue-600">
+                      for {selectedDate instanceof Date ? selectedDate.toLocaleDateString("en-US", { 
+                        weekday: "long",
+                        year: "numeric", 
+                        month: "long", 
+                        day: "numeric" 
+                      }) : new Date(selectedDate).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+                {selectedDate && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedDate(new Date())}
+                    className="text-xs"
+                  >
+                    <Calendar className="w-3 h-3 mr-1" />
+                    Reset to Today
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
@@ -369,10 +701,41 @@ export default function Bookings() {
               <div className="text-center py-12">
                 <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 text-lg">
-                  {search || statusFilter !== "all" || paymentFilter !== "all"
+                  {selectedDate || search || statusFilter !== "all" || paymentFilter !== "all"
                     ? "No bookings found matching your filters."
                     : "No bookings found."}
                 </p>
+                {selectedDate && (
+                  <div className="flex gap-2 mt-4 justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedDate(new Date())}
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      View Today's Bookings
+                    </Button>
+                    {selectedDate instanceof Date && selectedDate <= new Date() && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const tomorrow = new Date();
+                          tomorrow.setDate(tomorrow.getDate() + 1);
+                          setSelectedDate(tomorrow);
+                        }}
+                        className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        View Tomorrow's Bookings
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedDate(null)}
+                    >
+                      View All Bookings
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -403,11 +766,24 @@ export default function Bookings() {
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
+                        <div className="flex items-center gap-4 text-sm text-gray-600 mt-2 flex-wrap">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            {formatDate(booking.createdAt)}
+                            <span>Booked: {formatDate(booking.createdAt)}</span>
                           </span>
+                          {booking.deliveryDate && (
+                            <span className="flex items-center gap-1">
+                              <Package className="w-4 h-4" />
+                              <span className={new Date(booking.deliveryDate) > new Date() ? "text-blue-600 font-semibold" : ""}>
+                                Delivery: {formatDate(booking.deliveryDate)}
+                                {new Date(booking.deliveryDate) > new Date() && (
+                                  <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-300">
+                                    Upcoming
+                                  </Badge>
+                                )}
+                              </span>
+                            </span>
+                          )}
                           {booking.isReturned && (
                             <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                               Returned
@@ -463,6 +839,21 @@ export default function Bookings() {
                           <p><strong>Weight:</strong> {booking.cylinder?.weight ? `${booking.cylinder.weight} kg` : "N/A"}</p>
                           <p><strong>Quantity:</strong> {booking.quantity || 0}</p>
                           <p><strong>Price per unit:</strong> ₹{booking.cylinder?.price ? booking.cylinder.price.toLocaleString() : 0}</p>
+                          {booking.deliveryDate && (
+                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                              <p className="text-blue-800">
+                                <strong>📅 Scheduled Delivery:</strong> {new Date(booking.deliveryDate).toLocaleDateString("en-US", {
+                                  weekday: "long",
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric"
+                                })}
+                                {new Date(booking.deliveryDate) > new Date() && (
+                                  <span className="ml-2 text-blue-600 font-semibold">(Upcoming)</span>
+                                )}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -571,6 +962,176 @@ export default function Bookings() {
             })}
           </div>
         )}
+
+        {/* Book for Customer Dialog */}
+        <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Book Cylinder for Customer
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              {/* Customer Selection */}
+              <div>
+                <Label htmlFor="customer">Select Customer *</Label>
+                <select
+                  id="customer"
+                  value={bookingFormData.customerId}
+                  onChange={(e) => setBookingFormData({ ...bookingFormData, customerId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1"
+                  required
+                  disabled={customers.length === 0}
+                >
+                  <option value="">-- Select Customer --</option>
+                  {customers.length === 0 ? (
+                    <option value="" disabled>No customers available</option>
+                  ) : (
+                    customers.map((customer) => (
+                      <option key={customer._id} value={customer._id}>
+                        {customer.businessname || customer.username} - {customer.phoneNo}
+                      </option>
+                    ))
+                  )}
+                </select>
+                {customers.length === 0 && (
+                  <p className="text-sm text-yellow-600 mt-1">
+                    No customers assigned to you. Please contact admin to assign customers.
+                  </p>
+                )}
+              </div>
+
+              {/* Cylinder Selection */}
+              <div>
+                <Label htmlFor="cylinder">Select Cylinder *</Label>
+                <select
+                  id="cylinder"
+                  value={bookingFormData.cylinderId}
+                  onChange={(e) => setBookingFormData({ ...bookingFormData, cylinderId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1"
+                  required
+                  disabled={availableStocks.length === 0}
+                >
+                  <option value="">-- Select Cylinder --</option>
+                  {availableStocks.length === 0 ? (
+                    <option value="" disabled>No stock available</option>
+                  ) : (
+                    availableStocks.map((stock) => (
+                      <option key={stock.cylinderId._id} value={stock.cylinderId._id}>
+                        {stock.cylinderId.cylinderType} - Available: {stock.quantity} - ₹{stock.cylinderId.price}/unit
+                      </option>
+                    ))
+                  )}
+                </select>
+                {availableStocks.length === 0 && (
+                  <p className="text-sm text-yellow-600 mt-1">
+                    No stock available. Please request stock from admin.
+                  </p>
+                )}
+              </div>
+
+              {/* Quantity */}
+              <div>
+                <Label htmlFor="quantity">Quantity *</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  value={bookingFormData.quantity}
+                  onChange={(e) => {
+                    const selectedStock = availableStocks.find(
+                      s => s.cylinderId._id === bookingFormData.cylinderId
+                    );
+                    const maxQty = selectedStock ? selectedStock.quantity : 0;
+                    const qty = Math.max(1, Math.min(maxQty, parseInt(e.target.value) || 1));
+                    setBookingFormData({ ...bookingFormData, quantity: qty });
+                  }}
+                  className="mt-1"
+                  required
+                />
+                {bookingFormData.cylinderId && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Available: {
+                      availableStocks.find(s => s.cylinderId._id === bookingFormData.cylinderId)?.quantity || 0
+                    } units
+                  </p>
+                )}
+              </div>
+
+              {/* Payment Method */}
+              <div>
+                <Label htmlFor="paymentMethod">Payment Method *</Label>
+                <select
+                  id="paymentMethod"
+                  value={bookingFormData.paymentMethod}
+                  onChange={(e) => setBookingFormData({ ...bookingFormData, paymentMethod: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1"
+                  required
+                >
+                  <option value="cash">Cash</option>
+                  <option value="online">Online</option>
+                </select>
+              </div>
+
+              {/* Delivery Date */}
+              <div>
+                <Label htmlFor="deliveryDate">Delivery Date (Optional)</Label>
+                <CustomDatePicker
+                  selected={bookingFormData.deliveryDate}
+                  onChange={(date) => setBookingFormData({ ...bookingFormData, deliveryDate: date })}
+                  minDate={new Date()}
+                  placeholderText="Select delivery date"
+                  className="w-full mt-1"
+                />
+              </div>
+
+              {/* Total Amount Preview */}
+              {bookingFormData.cylinderId && bookingFormData.quantity > 0 && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-gray-600">Total Amount:</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    ₹{(
+                      (availableStocks.find(s => s.cylinderId._id === bookingFormData.cylinderId)?.cylinderId.price || 0) *
+                      bookingFormData.quantity
+                    ).toLocaleString()}
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setBookingDialogOpen(false);
+                    setBookingFormData({
+                      customerId: "",
+                      cylinderId: "",
+                      quantity: 1,
+                      paymentMethod: "cash",
+                      deliveryDate: null,
+                    });
+                  }}
+                  disabled={creatingBooking}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateBooking}
+                  disabled={
+                    creatingBooking ||
+                    !bookingFormData.customerId ||
+                    !bookingFormData.cylinderId ||
+                    bookingFormData.quantity <= 0
+                  }
+                >
+                  {creatingBooking ? "Creating..." : "Create Booking"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Map Dialog */}
         <Dialog open={mapDialogOpen} onOpenChange={setMapDialogOpen}>

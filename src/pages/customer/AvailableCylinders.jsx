@@ -16,8 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CylinderIcon, Package, Loader2, AlertCircle, ShoppingCart } from "lucide-react";
+import { CylinderIcon, Package, Loader2, AlertCircle, ShoppingCart, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import CustomDatePicker from "@/components/ui/DatePicker";
 
 export default function AvailableCylinders() {
   const dispatch = useDispatch();
@@ -27,6 +28,7 @@ export default function AvailableCylinders() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [deliveryDate, setDeliveryDate] = useState(null);
 
   useEffect(() => {
     dispatch(fetchAvailableCylinders());
@@ -36,6 +38,11 @@ export default function AvailableCylinders() {
     setSelectedCylinder(cylinder);
     setQuantity(1);
     setPaymentMethod("cash");
+    // Set default delivery date to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    setDeliveryDate(tomorrow);
     setIsDialogOpen(true);
   };
 
@@ -48,11 +55,17 @@ export default function AvailableCylinders() {
       return;
     }
 
+    if (!deliveryDate) {
+      toast.error("Please select a delivery date");
+      return;
+    }
+
     try {
       await dispatch(bookCylinder({
         cylinderId: selectedCylinder._id,
         quantity: quantity,
         paymentMethod: paymentMethod,
+        deliveryDate: deliveryDate ? deliveryDate.toISOString().split('T')[0] : undefined,
       })).unwrap();
       
       toast.success("Cylinder booked successfully! Payment will be required after delivery.");
@@ -60,6 +73,10 @@ export default function AvailableCylinders() {
       setSelectedCylinder(null);
       setQuantity(1);
       setPaymentMethod("cash");
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      setDeliveryDate(tomorrow);
     } catch (err) {
       toast.error(err || "Failed to book cylinder");
     }
@@ -202,6 +219,21 @@ export default function AvailableCylinders() {
                   </p>
                   <p className="text-xs text-gray-500 mt-2">
                     Payment will be required after delivery
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <CustomDatePicker
+                    label="Preferred Delivery Date"
+                    selected={deliveryDate}
+                    onChange={(date) => setDeliveryDate(date)}
+                    minDate={new Date()}
+                    placeholderText="Select delivery date"
+                    dateFormat="MMMM d, yyyy"
+                    required
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Select your preferred delivery date. We'll try to deliver on this date.
                   </p>
                 </div>
                 <div className="space-y-2">

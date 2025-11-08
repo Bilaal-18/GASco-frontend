@@ -41,16 +41,13 @@ export default function AdminDashboard() {
           }).catch(() => ({ data: { payments: [] } })),
         ]);
 
-        // ✅ Extract inventory from correct field
         const inventaryArray = stockRes.data?.Inventary || [];
 
-        // ✅ Sum totalQuantity from all inventory items
         const totalStock = inventaryArray.reduce(
           (sum, item) => sum + (item.totalQuantity || 0),
           0
         );
 
-        // Calculate total payments received
         const payments = paymentsRes.data?.payments || [];
         const totalPayments = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
@@ -71,17 +68,15 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900">
-      {/* Sidebar */}
       <Sidebar />
 
-      {/* Main Content */}
       <main className="flex-1 p-8">
         <h2 className="text-3xl font-semibold mb-6 text-slate-800 dark:text-slate-100">
           Welcome, {user?.username || "Admin"}
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Agents */}
+        
           <Card className="shadow-md border-slate-200 dark:border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Total Agents</CardTitle>
@@ -94,7 +89,6 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Customers */}
           <Card className="shadow-md border-slate-200 dark:border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Total Customers</CardTitle>
@@ -107,7 +101,6 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Inventory */}
           <Card className="shadow-md border-slate-200 dark:border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Total Stock</CardTitle>
@@ -120,7 +113,6 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Payments Received */}
           <Card 
             className="shadow-md border-slate-200 dark:border-slate-700 cursor-pointer hover:shadow-lg transition-shadow hover:border-teal-400"
             onClick={() => navigate("/admin/payments")}

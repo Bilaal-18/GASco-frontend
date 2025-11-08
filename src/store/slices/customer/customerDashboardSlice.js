@@ -101,7 +101,12 @@ export const bookCylinder = createAsyncThunk(
   async (bookingData, { rejectWithValue, dispatch }) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post('/api/newBooking', bookingData, {
+      // Ensure deliveryDate is sent if provided
+      const payload = { ...bookingData };
+      if (payload.deliveryDate) {
+        payload.deliveryDate = new Date(payload.deliveryDate).toISOString();
+      }
+      const response = await axios.post('/api/newBooking', payload, {
         headers: { Authorization: token },
       });
       

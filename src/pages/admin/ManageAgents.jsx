@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Search, RefreshCcw } from "lucide-react";
-import Sidebar from "@/components/layout/Sidebar";
+import Sidebar from "@/components/layout/SideBar";
 
 export default function ManageAgents() {
   const [agents, setAgents] = useState([]);

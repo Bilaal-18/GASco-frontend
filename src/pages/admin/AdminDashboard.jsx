@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "@/config/config";
 import userContext from "@/context/UserContext";
-import Sidebar from "@/components/layout/Sidebar";
+import Sidebar from "@/components/layout/SideBar";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Users, UserCog, Package, Wallet, ArrowRight } from "lucide-react";
 import { toast } from "sonner";

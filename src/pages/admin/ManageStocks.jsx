@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "@/config/config";
-import Sidebar from "@/components/layout/Sidebar";
+import Sidebar from "@/components/layout/SideBar";
 import {
   Card,
   CardHeader,

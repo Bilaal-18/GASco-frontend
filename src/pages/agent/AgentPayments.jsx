@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import axios from "@/config/config";
 import { toast } from "sonner";
+import AgentPaymentButton from "@/components/AgentPaymentButton";
 
 export default function AgentPayments() {
   const [paymentHistory, setPaymentHistory] = useState([]);
@@ -246,7 +247,7 @@ export default function AgentPayments() {
         {stockInfo.unpaidStockAmount > 0 && (
           <Card className="mb-6 border-orange-200 bg-orange-50">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3 flex-1">
                   <AlertCircle className="w-5 h-5 text-orange-600" />
                   <div className="flex-1">
@@ -257,13 +258,23 @@ export default function AgentPayments() {
                     </p>
                   </div>
                 </div>
-                <Button
-                  onClick={() => setCashPaymentDialogOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Record Cash Payment
-                </Button>
+                <div className="flex items-center gap-3">
+                  <AgentPaymentButton
+                    amount={stockInfo.unpaidStockAmount}
+                    onPaymentSuccess={(data) => {
+                      toast.success('Payment completed successfully!');
+                      fetchPaymentHistory();
+                    }}
+                  />
+                  <Button
+                    onClick={() => setCashPaymentDialogOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    variant="outline"
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Record Cash Payment
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

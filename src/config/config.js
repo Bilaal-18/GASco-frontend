@@ -1,4 +1,4 @@
 import axios from "axios";
 export default axios.create({
-    baseURL:"http://gasco-a7ob.onrender.com/"
+    baseURL:"https://gasco-a7ob.onrender.com/"
 })

@@ -30,6 +30,19 @@ export const getAgentForecast = async (agentId, horizon = 14) => {
 
     return response.data;
   } catch (error) {
+    // Handle 404 gracefully - return empty forecast instead of throwing error
+    if (error.response?.status === 404) {
+      console.log("No forecast found, returning empty forecast");
+      return {
+        message: 'No forecasts found. Click refresh to generate forecasts.',
+        agentId: agentId,
+        horizon: horizon,
+        forecasts: [],
+        generated: false,
+        lastUpdatedAt: null,
+        refreshed: false
+      };
+    }
     console.error("Error fetching agent forecast:", error);
     throw error;
   }
@@ -60,6 +73,28 @@ export const getAgentForecastStats = async (agentId, horizon = 14) => {
 
     return response.data;
   } catch (error) {
+    // Handle 404 gracefully - return empty stats instead of throwing error
+    if (error.response?.status === 404) {
+      console.log("No forecast stats found, returning empty stats");
+      return {
+        agentId: agentId,
+        horizon: horizon,
+        stats: {
+          totalDays: 0,
+          averageDailyDemand: 0,
+          maxDailyDemand: 0,
+          minDailyDemand: 0,
+          totalForecastedDemand: {
+            p50: 0,
+            p80: 0,
+            p95: 0
+          },
+          totalSuggestedStock: 0
+        },
+        forecasts: [],
+        message: 'No forecasts found. Click refresh to generate forecasts.'
+      };
+    }
     console.error("Error fetching agent forecast stats:", error);
     throw error;
   }

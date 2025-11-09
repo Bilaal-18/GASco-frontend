@@ -65,9 +65,32 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
       setError(null);
 
       // Fetch both forecast and stats in parallel
+      // These functions now handle 404s gracefully and return empty data instead of throwing
       const [forecastData, statsData] = await Promise.all([
-        getAgentForecast(agentId, horizon),
-        getAgentForecastStats(agentId, horizon)
+        getAgentForecast(agentId, horizon).catch(err => {
+          // Fallback in case API service doesn't handle it
+          console.warn("Forecast fetch failed, using empty data:", err);
+          return {
+            forecasts: [],
+            generated: false,
+            message: 'No forecasts found. Click refresh to generate forecasts.'
+          };
+        }),
+        getAgentForecastStats(agentId, horizon).catch(err => {
+          // Fallback in case API service doesn't handle it
+          console.warn("Stats fetch failed, using empty data:", err);
+          return {
+            stats: {
+              totalDays: 0,
+              averageDailyDemand: 0,
+              maxDailyDemand: 0,
+              minDailyDemand: 0,
+              totalForecastedDemand: { p50: 0, p80: 0, p95: 0 },
+              totalSuggestedStock: 0
+            },
+            forecasts: []
+          };
+        })
       ]);
 
       setForecasts(forecastData.forecasts || []);
@@ -76,11 +99,18 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
       // Show success message if forecast was just generated
       if (forecastData.generated) {
         toast.success("Fresh forecast generated successfully");
+      } else if ((forecastData.forecasts || []).length === 0) {
+        // Only show info message, not error, when no forecasts exist
+        console.log("No forecasts available. User can click refresh to generate.");
       }
     } catch (err) {
-      console.error("Error fetching forecast data:", err);
+      // This catch should rarely trigger now since we handle 404s in the API service
+      console.error("Unexpected error fetching forecast data:", err);
       setError(err?.response?.data?.error || "Failed to fetch forecast data");
-      toast.error(err?.response?.data?.error || "Failed to fetch forecast data");
+      // Don't show error toast for empty forecasts - it's a valid state
+      if (err?.response?.status !== 404) {
+        toast.error(err?.response?.data?.error || "Failed to fetch forecast data");
+      }
     } finally {
       setLoading(false);
     }

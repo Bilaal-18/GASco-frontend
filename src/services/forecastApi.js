@@ -30,9 +30,15 @@ export const getAgentForecast = async (agentId, horizon = 14) => {
 
     return response.data;
   } catch (error) {
-    // Handle 404 gracefully - return empty forecast instead of throwing error
-    if (error.response?.status === 404) {
-      console.log("No forecast found, returning empty forecast");
+    // Handle 404 and other "not found" errors gracefully
+    // Return empty forecast instead of throwing error
+    const status = error.response?.status;
+    const isNotFound = status === 404 || 
+                       (error.response?.data?.error && 
+                        error.response.data.error.toLowerCase().includes('not found'));
+    
+    if (isNotFound) {
+      // Silently handle 404 - this is expected when no forecasts exist yet
       return {
         message: 'No forecasts found. Click refresh to generate forecasts.',
         agentId: agentId,
@@ -43,7 +49,9 @@ export const getAgentForecast = async (agentId, horizon = 14) => {
         refreshed: false
       };
     }
-    console.error("Error fetching agent forecast:", error);
+    
+    // Only log and throw for unexpected errors (not 404)
+    console.error("Error fetching agent forecast (non-404 error):", error);
     throw error;
   }
 };
@@ -73,9 +81,15 @@ export const getAgentForecastStats = async (agentId, horizon = 14) => {
 
     return response.data;
   } catch (error) {
-    // Handle 404 gracefully - return empty stats instead of throwing error
-    if (error.response?.status === 404) {
-      console.log("No forecast stats found, returning empty stats");
+    // Handle 404 and other "not found" errors gracefully
+    // Return empty stats instead of throwing error
+    const status = error.response?.status;
+    const isNotFound = status === 404 || 
+                       (error.response?.data?.error && 
+                        error.response.data.error.toLowerCase().includes('not found'));
+    
+    if (isNotFound) {
+      // Silently handle 404 - this is expected when no forecasts exist yet
       return {
         agentId: agentId,
         horizon: horizon,
@@ -95,7 +109,9 @@ export const getAgentForecastStats = async (agentId, horizon = 14) => {
         message: 'No forecasts found. Click refresh to generate forecasts.'
       };
     }
-    console.error("Error fetching agent forecast stats:", error);
+    
+    // Only log and throw for unexpected errors (not 404)
+    console.error("Error fetching agent forecast stats (non-404 error):", error);
     throw error;
   }
 };

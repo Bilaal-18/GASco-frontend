@@ -15,7 +15,15 @@ export const createPaymentOrder = createAsyncThunk(
   'payment/createOrder',
   async (bookingId, { rejectWithValue }) => {
     try {
+      if (!bookingId) {
+        return rejectWithValue('Booking ID is required');
+      }
+
       const token = localStorage.getItem('token');
+      if (!token) {
+        return rejectWithValue('Authentication required. Please login again.');
+      }
+
       const response = await axios.post(
         '/api/payment/create-order',
         { bookingId },
@@ -23,11 +31,18 @@ export const createPaymentOrder = createAsyncThunk(
           headers: { Authorization: token },
         }
       );
+
+      if (!response.data || !response.data.orderId) {
+        return rejectWithValue(response.data?.error || 'Invalid response from server');
+      }
+
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.error || 'Failed to create payment order'
-      );
+      console.error('Create payment order error:', error);
+      const errorMessage = error.response?.data?.error 
+        || error.message 
+        || 'Failed to create payment order';
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -37,7 +52,15 @@ export const verifyPayment = createAsyncThunk(
   'payment/verify',
   async (paymentData, { rejectWithValue, dispatch }) => {
     try {
+      if (!paymentData || !paymentData.razorpayOrderId || !paymentData.razorpayPaymentId || !paymentData.razorpaySignature || !paymentData.bookingId) {
+        return rejectWithValue('Missing payment verification data');
+      }
+
       const token = localStorage.getItem('token');
+      if (!token) {
+        return rejectWithValue('Authentication required. Please login again.');
+      }
+
       const response = await axios.post(
         '/api/payment/verify',
         paymentData,
@@ -45,16 +68,27 @@ export const verifyPayment = createAsyncThunk(
           headers: { Authorization: token },
         }
       );
+
+      if (!response.data) {
+        return rejectWithValue('Invalid response from server');
+      }
       
       // Refresh bookings after successful payment
-      const { fetchCustomerBookings } = await import('./customerBookingsSlice');
-      dispatch(fetchCustomerBookings());
+      try {
+        const { fetchCustomerBookings } = await import('./customerBookingsSlice');
+        dispatch(fetchCustomerBookings());
+      } catch (importError) {
+        console.warn('Failed to refresh bookings after payment:', importError);
+        // Don't fail payment verification if booking refresh fails
+      }
       
       return response.data;
     } catch (error) {
-      return rejectWithValue(
-        error.response?.data?.error || 'Failed to verify payment'
-      );
+      console.error('Verify payment error:', error);
+      const errorMessage = error.response?.data?.error 
+        || error.message 
+        || 'Failed to verify payment';
+      return rejectWithValue(errorMessage);
     }
   }
 );

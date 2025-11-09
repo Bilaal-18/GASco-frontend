@@ -21,13 +21,33 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
 
   // Load Razorpay script
   useEffect(() => {
+    // Check if Razorpay is already loaded
+    if (window.Razorpay) {
+      return;
+    }
+
+    // Check if script is already being loaded
+    const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existingScript) {
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
+    script.onerror = () => {
+      console.error('Failed to load Razorpay SDK');
+      toast.error('Failed to load payment gateway. Please refresh the page.');
+    };
+    
     document.body.appendChild(script);
 
+    // Cleanup function - only remove if we added it
     return () => {
-      document.body.removeChild(script);
+      const scriptToRemove = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+      if (scriptToRemove && scriptToRemove === script) {
+        document.body.removeChild(scriptToRemove);
+      }
     };
   }, []);
 
@@ -58,25 +78,44 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
     try {
       setLoading(true);
 
+      // Wait for Razorpay SDK to load if not already loaded
+      if (!window.Razorpay) {
+        // Wait up to 5 seconds for Razorpay to load
+        let attempts = 0;
+        while (!window.Razorpay && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        
+        if (!window.Razorpay) {
+          throw new Error('Razorpay SDK not loaded. Please refresh the page and try again.');
+        }
+      }
+
       // Create Razorpay order
       const orderResult = await dispatch(
         createPaymentOrder(booking._id)
       ).unwrap();
 
       if (!orderResult || !orderResult.orderId) {
-        throw new Error('Failed to create payment order');
+        throw new Error(orderResult?.error || 'Failed to create payment order');
+      }
+
+      if (!orderResult.keyId) {
+        throw new Error('Payment gateway configuration error. Please contact support.');
       }
 
       // Initialize Razorpay checkout
       const options = {
         key: orderResult.keyId,
         amount: orderResult.amount,
-        currency: orderResult.currency,
+        currency: orderResult.currency || 'INR',
         name: 'GASCo',
         description: `Payment for booking #${booking._id?.slice(-8).toUpperCase()}`,
         order_id: orderResult.orderId,
         handler: async function (response) {
           try {
+            setLoading(true);
             // Verify payment
             const verifyResult = await dispatch(
               verifyPayment({
@@ -92,7 +131,11 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
               onPaymentSuccess(verifyResult);
             }
           } catch (error) {
-            toast.error(error || 'Payment verification failed');
+            console.error('Payment verification error:', error);
+            const errorMessage = typeof error === 'string' 
+              ? error 
+              : error?.message || error?.error || 'Payment verification failed';
+            toast.error(errorMessage);
           } finally {
             setLoading(false);
           }
@@ -111,16 +154,27 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
             toast.info('Payment cancelled');
           },
         },
+        notes: {
+          bookingId: booking._id,
+        },
       };
 
-      if (window.Razorpay) {
-        const razorpay = new window.Razorpay(options);
-        razorpay.open();
-      } else {
-        throw new Error('Razorpay SDK not loaded. Please refresh the page.');
-      }
+      const razorpay = new window.Razorpay(options);
+      
+      // Add error handler
+      razorpay.on('payment.failed', function (response) {
+        console.error('Payment failed:', response);
+        setLoading(false);
+        toast.error(response.error?.description || 'Payment failed. Please try again.');
+      });
+
+      razorpay.open();
     } catch (error) {
-      toast.error(error || 'Failed to initialize payment');
+      console.error('Payment initialization error:', error);
+      const errorMessage = typeof error === 'string' 
+        ? error 
+        : error?.message || error?.error || 'Failed to initialize payment';
+      toast.error(errorMessage);
       setLoading(false);
     }
   };

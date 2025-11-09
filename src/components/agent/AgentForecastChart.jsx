@@ -66,20 +66,26 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
 
       // Fetch both forecast and stats in parallel
       // These functions now handle 404s gracefully and return empty data instead of throwing
-      const [forecastData, statsData] = await Promise.all([
-        getAgentForecast(agentId, horizon).catch(err => {
-          // Fallback in case API service doesn't handle it
-          console.warn("Forecast fetch failed, using empty data:", err);
-          return {
+      const results = await Promise.allSettled([
+        getAgentForecast(agentId, horizon),
+        getAgentForecastStats(agentId, horizon)
+      ]);
+      
+      // Extract data from results - handle both fulfilled and rejected promises
+      const forecastResult = results[0];
+      const statsResult = results[1];
+      
+      const forecastData = forecastResult.status === 'fulfilled' 
+        ? forecastResult.value 
+        : {
             forecasts: [],
             generated: false,
             message: 'No forecasts found. Click refresh to generate forecasts.'
           };
-        }),
-        getAgentForecastStats(agentId, horizon).catch(err => {
-          // Fallback in case API service doesn't handle it
-          console.warn("Stats fetch failed, using empty data:", err);
-          return {
+      
+      const statsData = statsResult.status === 'fulfilled'
+        ? statsResult.value
+        : {
             stats: {
               totalDays: 0,
               averageDailyDemand: 0,
@@ -90,8 +96,6 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
             },
             forecasts: []
           };
-        })
-      ]);
 
       setForecasts(forecastData.forecasts || []);
       setStats(statsData.stats || null);

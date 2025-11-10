@@ -258,10 +258,10 @@ export default function ManageCustomers() {
   };
 
   return (
-    <div className="flex">
+    <div>
       <Sidebar />
 
-      <div className="flex-1 p-6 space-y-6">
+      <div className="p-6 space-y-6 ml-64 max-w-[calc(100%-16rem)]">
         <Card>
           <CardHeader>
             <CardTitle>Manage Customers</CardTitle>

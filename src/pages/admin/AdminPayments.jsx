@@ -558,9 +558,9 @@ export default function AdminPayments() {
   // If data is still loading, show loading spinner instead of content
   if (loading) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <div className="min-h-screen bg-gray-50">
         <Sidebar /> {/* Show sidebar navigation */}
-        <div className="flex-1 flex items-center justify-center">
+        <div className="ml-64 max-w-[calc(100%-16rem)] flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" /> {/* Spinning loader icon */}
         </div>
       </div>
@@ -571,12 +571,12 @@ export default function AdminPayments() {
   // MAIN RENDER - Display the Page Content
   // ============================================
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       {/* Sidebar navigation menu */}
       <Sidebar />
       
       {/* Main content area */}
-      <div className="flex-1 p-8">
+      <div className="p-8 ml-64 max-w-[calc(100%-16rem)]">
         {/* ============================================
             Page Header Section
             ============================================ */}

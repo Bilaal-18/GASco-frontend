@@ -182,9 +182,9 @@ export default function ManageAgents() {
   }, [search, agents]);
 
   return (
-    <div className="flex">
+    <div>
       <Sidebar />
-      <div className="flex-1 p-6">
+      <div className="p-6 ml-64 max-w-[calc(100%-16rem)]">
         <Card className="p-6">
           <CardHeader className="flex justify-between items-center">
             <CardTitle>Manage Agents</CardTitle>

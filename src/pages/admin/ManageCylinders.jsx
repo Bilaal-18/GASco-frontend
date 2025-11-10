@@ -155,10 +155,10 @@ export default function ManageCylinders() {
   }, [search, filterType, cylinders]);
 
   return (
-    <div className="flex">
+    <div>
       <Sidebar />
 
-      <div className="flex-1 p-6 bg-gray-50 min-h-screen">
+      <div className="p-6 bg-gray-50 min-h-screen ml-64 max-w-[calc(100%-16rem)]">
         {/* 🔹 Header */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
           <h1 className="text-2xl font-bold text-gray-800">Manage Cylinders</h1>

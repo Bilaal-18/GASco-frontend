@@ -311,9 +311,9 @@ const AgentStock = () => {
   );
 
   return (
-    <div className="flex">
+    <div>
       <Sidebar />
-      <div className="p-6 flex flex-col gap-6 w-full">
+      <div className="p-6 flex flex-col gap-6 ml-64 max-w-[calc(100%-16rem)]">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Agent Stock Management</h2>
           <div className="flex items-center gap-3">

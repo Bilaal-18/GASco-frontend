@@ -137,9 +137,9 @@ export default function GasRequests() {
 
   if (loading) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <div className="min-h-screen bg-gray-50">
         <Sidebar />
-        <div className="flex-1 p-8 flex items-center justify-center">
+        <div className="ml-64 max-w-[calc(100%-16rem)] p-8 flex items-center justify-center">
           <p className="text-gray-500">Loading gas requests...</p>
         </div>
       </div>
@@ -147,9 +147,9 @@ export default function GasRequests() {
   }
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex-1 p-8">
+      <div className="p-8 ml-64 max-w-[calc(100%-16rem)]">
         <div className="mb-8">
           <h1 className="text-3xl font-semibold text-gray-800 mb-2">
             Gas Requests Management

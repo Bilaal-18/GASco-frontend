@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import userContext from "@/context/UserContext";
-import { LogOut, Users, Package, UserCog, LayoutDashboard, CylinderIcon, ShoppingCart } from "lucide-react";
+import { LogOut, Users, Package, UserCog, LayoutDashboard, CylinderIcon, ShoppingCart, Wallet } from "lucide-react";
 
 export default function Sidebar() {
   const { handleLogout, user } = useContext(userContext);
@@ -13,7 +13,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 h-screen bg-slate-900 text-white flex flex-col p-5 space-y-2">
+    <aside className="fixed left-0 top-0 w-64 h-screen bg-slate-900 text-white flex flex-col p-5 space-y-2 z-50">
       <h2 className="text-xl font-semibold mb-6 text-center">
         Admin Panel
       </h2>
@@ -73,6 +73,14 @@ export default function Sidebar() {
         >
           <ShoppingCart size={18} />
           Gas Requests
+        </Link>
+
+        <Link
+          to="/admin/payments"
+          className="flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition"
+        >
+          <Wallet size={18} />
+          Payments Received
         </Link>
       </nav>
 

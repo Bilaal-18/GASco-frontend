@@ -55,7 +55,7 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
       <Navbar />
 
-      {/* Hero Section */}
+      
       <main className="flex-1">
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
@@ -91,7 +91,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Statistics Section */}
+      
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-6">
             <motion.div
@@ -159,7 +159,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Available Cylinders Section */}
+      
         <section className="py-16 bg-gradient-to-b from-slate-50 to-white">
           <div className="max-w-7xl mx-auto px-6">
             <motion.div
@@ -229,7 +229,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Features Section */}
+        
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-6">
             <motion.div
@@ -301,7 +301,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CTA Section */}
+    
         <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
           <div className="max-w-4xl mx-auto px-6 text-center">
             <motion.div

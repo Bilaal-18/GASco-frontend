@@ -12,7 +12,7 @@ const initialState = {
   createError: null,
 };
 
-// Fetch all customer bookings
+
 export const fetchCustomerBookings = createAsyncThunk(
   'customerBookings/fetchBookings',
   async (_, { rejectWithValue }) => {
@@ -21,7 +21,7 @@ export const fetchCustomerBookings = createAsyncThunk(
       const response = await axios.get('/api/customerBookings', {
         headers: { Authorization: token },
       });
-      // Backend returns { message, bookings }, so extract bookings array
+      
       return response.data?.bookings || response.data || [];
     } catch (error) {
       return rejectWithValue(
@@ -31,7 +31,7 @@ export const fetchCustomerBookings = createAsyncThunk(
   }
 );
 
-// Fetch single booking by ID
+
 export const fetchBookingById = createAsyncThunk(
   'customerBookings/fetchBookingById',
   async (bookingId, { rejectWithValue }) => {
@@ -40,7 +40,7 @@ export const fetchBookingById = createAsyncThunk(
       const response = await axios.get(`/api/SingleBooking/${bookingId}`, {
         headers: { Authorization: token },
       });
-      // Backend returns { message, booking }, so extract booking object
+      
       return response.data?.booking || response.data;
     } catch (error) {
       return rejectWithValue(
@@ -50,7 +50,6 @@ export const fetchBookingById = createAsyncThunk(
   }
 );
 
-// Create new booking
 export const createBooking = createAsyncThunk(
   'customerBookings/createBooking',
   async (bookingData, { rejectWithValue }) => {
@@ -68,7 +67,6 @@ export const createBooking = createAsyncThunk(
   }
 );
 
-// Update booking
 export const updateBooking = createAsyncThunk(
   'customerBookings/updateBooking',
   async ({ bookingId, updateData }, { rejectWithValue }) => {
@@ -81,7 +79,7 @@ export const updateBooking = createAsyncThunk(
           headers: { Authorization: token },
         }
       );
-      // Backend returns { message, booking }, so extract booking object
+      
       return response.data?.booking || response.data;
     } catch (error) {
       return rejectWithValue(
@@ -91,7 +89,6 @@ export const updateBooking = createAsyncThunk(
   }
 );
 
-// Cancel booking
 export const cancelBooking = createAsyncThunk(
   'customerBookings/cancelBooking',
   async (bookingId, { rejectWithValue }) => {
@@ -104,7 +101,7 @@ export const cancelBooking = createAsyncThunk(
           headers: { Authorization: token },
         }
       );
-      // Backend returns { message, booking }, so extract booking object
+    
       return response.data?.booking || response.data;
     } catch (error) {
       return rejectWithValue(
@@ -131,7 +128,7 @@ const customerBookingsSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Fetch all bookings
+    
     builder
       .addCase(fetchCustomerBookings.pending, (state) => {
         state.loading = true;
@@ -146,7 +143,7 @@ const customerBookingsSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Fetch booking by ID
+  
     builder
       .addCase(fetchBookingById.pending, (state) => {
         state.loading = true;
@@ -161,7 +158,7 @@ const customerBookingsSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Create booking
+  
     builder
       .addCase(createBooking.pending, (state) => {
         state.createLoading = true;
@@ -176,7 +173,7 @@ const customerBookingsSlice = createSlice({
         state.createError = action.payload;
       });
 
-    // Update booking
+  
     builder
       .addCase(updateBooking.pending, (state) => {
         state.updateLoading = true;
@@ -199,7 +196,7 @@ const customerBookingsSlice = createSlice({
         state.updateError = action.payload;
       });
 
-    // Cancel booking
+    
     builder
       .addCase(cancelBooking.pending, (state) => {
         state.updateLoading = true;

@@ -31,7 +31,7 @@ export default function GasRequests() {
   const [rejectRemarks, setRejectRemarks] = useState("");
   const token = localStorage.getItem("token");
 
-  // Fetch all gas requests
+  
   const fetchRequests = async () => {
     try {
       setLoading(true);
@@ -52,16 +52,15 @@ export default function GasRequests() {
     fetchRequests();
   }, []);
 
-  // Filter requests based on status and search term
+  
   useEffect(() => {
     let filtered = requests;
 
-    // Filter by status
     if (statusFilter !== "all") {
       filtered = filtered.filter((req) => req.status === statusFilter);
     }
 
-    // Filter by search term (agent name, cylinder type)
+  
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -75,7 +74,7 @@ export default function GasRequests() {
     setFilteredRequests(filtered);
   }, [statusFilter, searchTerm, requests]);
 
-  // Handle approve request
+
   const handleApprove = async (requestId) => {
     try {
       const res = await axios.put(
@@ -91,7 +90,7 @@ export default function GasRequests() {
     }
   };
 
-  // Handle reject request
+
   const handleReject = async () => {
     if (!rejectDialog.requestId) return;
 

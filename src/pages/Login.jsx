@@ -48,7 +48,7 @@ export default function Login(props) {
 
             <CardContent>
               <form onSubmit={formik.handleSubmit} className="space-y-4">
-                {/* Email */}
+                
                 <div>
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -65,7 +65,7 @@ export default function Login(props) {
                   )}
                 </div>
 
-                {/* Password */}
+                
                 <div>
                   <Label htmlFor="password">Password</Label>
                   <Input
@@ -82,7 +82,7 @@ export default function Login(props) {
                   )}
                 </div>
 
-                {/* Buttons */}
+                
                 <div className="flex justify-between items-center pt-4">
                   <Link to="/">
                     <Button variant="outline" className="rounded-xl">

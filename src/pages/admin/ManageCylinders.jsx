@@ -46,7 +46,7 @@ export default function ManageCylinders() {
 
   const token = localStorage.getItem("token");
 
-  // 🔹 Fetch cylinders
+
   const fetchCylinders = async () => {
     try {
       const res = await axios.get("/api/list", {
@@ -66,13 +66,13 @@ export default function ManageCylinders() {
     fetchCylinders();
   }, []);
 
-  // 🔹 Handle form input
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 🔹 Add or Update cylinder
+  
   const handleSubmit = async () => {
     if (!formData.cylinderName || !formData.cylinderType || !formData.weight || !formData.price) {
       toast.error("Please fill all fields");
@@ -107,7 +107,7 @@ export default function ManageCylinders() {
     }
   };
 
-  // 🔹 Delete cylinder
+
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this cylinder?")) return;
     try {
@@ -121,7 +121,6 @@ export default function ManageCylinders() {
     }
   };
 
-  // 🔹 Edit cylinder
   const openEditDialog = (cylinder) => {
     setEditing(cylinder);
     setFormData({
@@ -133,7 +132,7 @@ export default function ManageCylinders() {
     setOpen(true);
   };
 
-  // 🔹 Search + Filter
+
   useEffect(() => {
     let result = cylinders;
 
@@ -159,7 +158,7 @@ export default function ManageCylinders() {
       <Sidebar />
 
       <div className="p-6 bg-gray-50 min-h-screen ml-64 max-w-[calc(100%-16rem)]">
-        {/* 🔹 Header */}
+      
         <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
           <h1 className="text-2xl font-bold text-gray-800">Manage Cylinders</h1>
 
@@ -270,7 +269,7 @@ export default function ManageCylinders() {
           </div>
         </div>
 
-        {/* 🔍 Search + Filter */}
+    
         <div className="flex flex-col sm:flex-row justify-between gap-3 mb-6">
           <div className="flex items-center gap-2">
             <Search className="text-gray-500" size={18} />
@@ -293,7 +292,7 @@ export default function ManageCylinders() {
           </select>
         </div>
 
-        {/* 🔹 Cylinder Cards */}
+        
         {loading ? (
           <p className="text-gray-600">Loading cylinders...</p>
         ) : filteredCylinders.length === 0 ? (
@@ -344,7 +343,7 @@ export default function ManageCylinders() {
           </div>
         )}
 
-        {/* 🔹 View Cylinder Dialog */}
+        
         {viewCylinder && (
           <Dialog open={!!viewCylinder} onOpenChange={() => setViewCylinder(null)}>
             <DialogContent className="max-w-md">

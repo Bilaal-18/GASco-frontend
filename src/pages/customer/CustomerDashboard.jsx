@@ -93,7 +93,7 @@ export default function CustomerDashboard() {
           <p className="text-gray-600">Overview of your bookings and statistics</p>
         </div>
 
-        {/* Stats Grid */}
+      
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
           {stats.map((stat, idx) => {
             const Icon = stat.icon;
@@ -113,7 +113,7 @@ export default function CustomerDashboard() {
           })}
         </div>
 
-        {/* Recent Bookings */}
+    
         <Card>
           <CardHeader>
             <CardTitle>Recent Bookings</CardTitle>
@@ -160,7 +160,7 @@ export default function CustomerDashboard() {
           </CardContent>
         </Card>
 
-        {/* Customer Chatbot */}
+    
         <CustomerChatbot bookings={bookings} summary={summary} />
       </div>
     </div>

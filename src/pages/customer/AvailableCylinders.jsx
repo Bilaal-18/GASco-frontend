@@ -38,7 +38,6 @@ export default function AvailableCylinders() {
     setSelectedCylinder(cylinder);
     setQuantity(1);
     setPaymentMethod("cash");
-    // Set default delivery date to tomorrow
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
@@ -174,7 +173,7 @@ export default function AvailableCylinders() {
           </div>
         )}
 
-        {/* Booking Dialog */}
+      
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent>
             <DialogHeader>

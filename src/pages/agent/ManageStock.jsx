@@ -21,7 +21,7 @@ export default function ManageStock() {
   const [showRequests, setShowRequests] = useState(false);
   const token = localStorage.getItem("token");
 
-  // Fetch agent data first to get agent ID
+  
   useEffect(() => {
     const fetchAgent = async () => {
       try {
@@ -34,7 +34,7 @@ export default function ManageStock() {
     fetchAgent();
   }, [token]);
 
-  // Fetch cylinders for dropdown
+  
   useEffect(() => {
     const fetchCylinders = async () => {
       try {
@@ -49,7 +49,7 @@ export default function ManageStock() {
     }
   }, [token]);
 
-  // Fetch all stocks
+  
   useEffect(() => {
     const fetchStocks = async () => {
       if (!agentId) return;
@@ -65,7 +65,7 @@ export default function ManageStock() {
     fetchStocks();
   }, [agentId, token]);
 
-  // Fetch gas requests
+
   useEffect(() => {
     const fetchRequests = async () => {
       try {
@@ -78,14 +78,13 @@ export default function ManageStock() {
     fetchRequests();
   }, [token]);
 
-  // Handle gas request creation
+
   const handleRequestGas = async () => {
     if (!agentId) {
       toast.error("Agent ID not found. Please refresh the page.");
       return;
     }
     
-    // Validate inputs
     if (!newStock.cylinderId) {
       toast.error("Please select a cylinder type");
       return;
@@ -117,7 +116,6 @@ export default function ManageStock() {
       setOpenDialog(false);
       setNewStock({ cylinderId: "", quantity: "", remarks: "" });
       
-      // Refresh requests list
       const requestsRes = await axios.get("/api/gasRequests/my", { 
         headers: { Authorization: token } 
       });
@@ -126,17 +124,13 @@ export default function ManageStock() {
       console.error("Error submitting gas request:", err);
       let errorMessage = "Failed to submit gas request";
       
-      // Check if it's an axios error with response
       if (err.response) {
         const responseData = err.response.data;
-        
-        // If there are validation details, extract them
         if (responseData.details && Array.isArray(responseData.details)) {
           errorMessage = responseData.details
             .map(d => d.message || d.msg || (typeof d === 'string' ? d : JSON.stringify(d)))
             .join(", ");
         } 
-        // Otherwise use the error message
         else if (responseData.error) {
           if (typeof responseData.error === 'string') {
             errorMessage = responseData.error;
@@ -149,7 +143,6 @@ export default function ManageStock() {
           errorMessage = responseData.message;
         }
       } 
-      // Handle network errors, timeouts, or other axios errors
       else if (err.request) {
         errorMessage = "Network error. Please check your connection and try again.";
       } else if (err.message) {
@@ -160,7 +153,7 @@ export default function ManageStock() {
     }
   };
 
-  // Handle delete
+
   const handleDelete = async (stock) => {
     if (!confirm("Are you sure you want to delete this stock?")) return;
     if (!agentId) {
@@ -173,7 +166,6 @@ export default function ManageStock() {
         headers: { Authorization: token } 
       });
       toast.success("Stock deleted successfully");
-      // Refresh stock list
       const res = await axios.get(`/api/ownStock/${agentId}`, { 
         headers: { Authorization: token } 
       });
@@ -213,7 +205,7 @@ export default function ManageStock() {
           </div>
         </div>
 
-        {/* Gas Requests Section */}
+      
         {showRequests && (
           <div className="mb-8">
             <h2 className="text-2xl font-semibold text-gray-700 mb-4">My Gas Requests</h2>
@@ -269,7 +261,7 @@ export default function ManageStock() {
           </div>
         )}
 
-        {/* Stock Cards */}
+        
         {stocks.length === 0 ? (
           <p className="text-gray-500 text-center">No stock available. Add new stock to begin.</p>
         ) : (

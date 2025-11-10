@@ -17,14 +17,11 @@ export default function ProfileImageUpload({
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) {
-      // Reset input if no file selected
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
       return;
     }
-
-    // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       toast.error('Invalid file type. Please select a JPEG, PNG, GIF, or WebP image.');
@@ -34,7 +31,6 @@ export default function ProfileImageUpload({
       return;
     }
 
-    // Validate file size (5MB)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error('File size too large. Maximum size is 5MB.');
@@ -44,7 +40,6 @@ export default function ProfileImageUpload({
       return;
     }
 
-    // Create preview
     const reader = new FileReader();
     reader.onerror = () => {
       toast.error('Failed to read image file');
@@ -76,9 +71,6 @@ export default function ProfileImageUpload({
 
       const formData = new FormData();
       formData.append('image', file);
-
-      // Upload image to Cloudinary
-      // Don't set Content-Type header - let browser set it with boundary
       const uploadResponse = await axios.post('/api/upload/profile-image', formData, {
         headers: {
           Authorization: token,
@@ -91,7 +83,7 @@ export default function ProfileImageUpload({
 
       const imageUrl = uploadResponse.data.imageUrl;
 
-      // Update user profile with image URL
+
       if (updateEndpoint && userId) {
         const endpoint = updateEndpoint === '/api/account' 
           ? '/api/account' 
@@ -108,19 +100,16 @@ export default function ProfileImageUpload({
         } catch (updateError) {
           console.error('Profile update error:', updateError);
           toast.error(updateError.response?.data?.error || 'Image uploaded but failed to update profile');
-          // Still show success for upload even if profile update fails
         }
       }
 
       toast.success('Profile picture updated successfully!');
       
-      // Clear preview and file input
       setPreview(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
 
-      // Call callback after successful upload
       if (onImageUploaded) {
         await onImageUploaded(imageUrl);
       }
@@ -160,7 +149,7 @@ export default function ProfileImageUpload({
           )}
         </div>
 
-        {/* Cancel button for preview */}
+    
         {preview && (
           <button
             onClick={handleCancel}

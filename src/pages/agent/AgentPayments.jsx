@@ -48,7 +48,7 @@ export default function AgentPayments() {
     fetchPaymentHistory();
   }, [token]);
 
-  // Load Razorpay script
+
   useEffect(() => {
     if (window.Razorpay) return;
     
@@ -74,7 +74,6 @@ export default function AgentPayments() {
 
     try {
       setLoading(true);
-      // This endpoint should be added to backend - for now using a placeholder
       const res = await axios.get("/api/agent/payment/history", {
         headers: { Authorization: token },
       });
@@ -89,7 +88,6 @@ export default function AgentPayments() {
         unpaidStocks: data.stockInfo?.unpaidStocks || [],
       };
       
-      // Debug logging
       console.log('Agent Payment History Data:', {
         stockInfo: stockInfoData,
         paymentsCount: data.payments?.length || 0,
@@ -99,7 +97,6 @@ export default function AgentPayments() {
       setStockInfo(stockInfoData);
     } catch (err) {
       console.error("Error fetching agent payment history:", err);
-      // If endpoint doesn't exist, set empty data
       if (err?.response?.status === 404) {
         setPaymentHistory([]);
         setStockInfo({
@@ -124,7 +121,6 @@ export default function AgentPayments() {
       return;
     }
 
-    // Allow agent to enter any desired amount (not limited to unpaid amount)
     if (paymentAmount < 1) {
       toast.error("Minimum payment amount is ₹1");
       return;
@@ -133,7 +129,6 @@ export default function AgentPayments() {
     try {
       setProcessingOnlinePayment(true);
 
-      // Wait for Razorpay SDK to load
       if (!window.Razorpay) {
         let attempts = 0;
         while (!window.Razorpay && attempts < 50) {
@@ -150,7 +145,6 @@ export default function AgentPayments() {
         throw new Error('Authentication required. Please login again.');
       }
 
-      // Create Razorpay order
       const orderResponse = await axios.post(
         '/api/agent/payment/create-order',
         { 
@@ -172,7 +166,6 @@ export default function AgentPayments() {
         throw new Error('Payment gateway configuration error. Please contact support.');
       }
 
-      // Initialize Razorpay checkout
       const options = {
         key: orderResult.keyId,
         amount: orderResult.amount,
@@ -182,7 +175,6 @@ export default function AgentPayments() {
         order_id: orderResult.orderId,
         handler: async function (response) {
           try {
-            // Verify payment
             await axios.post(
               '/api/agent/payment/verify',
               {
@@ -201,7 +193,6 @@ export default function AgentPayments() {
             toast.success('Online payment completed successfully!');
             setOnlinePaymentDialogOpen(false);
             setOnlinePaymentAmount("");
-            // Refresh payment history after a short delay to ensure backend has processed
             setTimeout(async () => {
               await fetchPaymentHistory();
             }, 1000);
@@ -240,11 +231,7 @@ export default function AgentPayments() {
         toast.error(errorMsg);
         setProcessingOnlinePayment(false);
       });
-
-      // Open Razorpay checkout - this will open the payment modal
       razorpay.open();
-      
-      // Close dialog after Razorpay opens (payment modal is now open)
       setOnlinePaymentDialogOpen(false);
       
     } catch (error) {
@@ -327,7 +314,7 @@ export default function AgentPayments() {
           <p className="text-gray-600">View your payment status and make payments for stock received</p>
         </div>
 
-        {/* Stats Cards */}
+      
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <Card>
             <CardHeader className="pb-2">
@@ -369,7 +356,6 @@ export default function AgentPayments() {
           </Card>
         </div>
 
-        {/* Unpaid Stock Alert */}
         {stockInfo.unpaidStockAmount > 0 && (
           <Card className="mb-6 border-orange-200 bg-orange-50">
             <CardContent className="pt-6">
@@ -398,7 +384,6 @@ export default function AgentPayments() {
           </Card>
         )}
 
-        {/* Unpaid Stock Details */}
         {stockInfo.unpaidStocks.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
@@ -433,7 +418,6 @@ export default function AgentPayments() {
           </Card>
         )}
 
-        {/* Payment History */}
         <Card>
           <CardHeader>
             <CardTitle>Payment History</CardTitle>
@@ -472,7 +456,7 @@ export default function AgentPayments() {
                             {payment.transactionID && (
                               <p><strong>Transaction ID:</strong> {payment.transactionID}</p>
                             )}
-                            {/* Partial Payment Details */}
+                          
                             {payment.status === "partial" && payment.method === "online" && (
                               <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
                                 <p className="font-semibold text-yellow-800 text-xs mb-1">Partial Payment</p>
@@ -508,7 +492,7 @@ export default function AgentPayments() {
           </CardContent>
         </Card>
 
-        {/* Online Payment Dialog */}
+      
         <Dialog open={onlinePaymentDialogOpen} onOpenChange={setOnlinePaymentDialogOpen}>
           <DialogContent>
             <DialogHeader>

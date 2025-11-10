@@ -10,37 +10,34 @@ const initialState = {
   paymentError: null,
 };
 
-// Fetch all payment details/history
 export const fetchPaymentDetails = createAsyncThunk(
   'paymentDetails/fetchPayments',
   async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('token');
-      // Get customer ID from account
+    
       const accountRes = await axios.get('/api/account', {
         headers: { Authorization: token },
       });
       const customerId = accountRes.data._id;
       
-      // Get user role to handle authorization
+    
       const userRole = accountRes.data.role;
       
       let customerBookings = [];
       
-      // Use customer-specific endpoint for customers, allBookings for admin/agent
+    
       if (userRole === 'customer') {
         const bookingsRes = await axios.get('/api/customerBookings', {
           headers: { Authorization: token },
         });
         customerBookings = bookingsRes.data?.bookings || bookingsRes.data || [];
       } else {
-        // For admin/agent, use allBookings and filter
         const bookingsRes = await axios.get('/api/allBookings', {
           headers: { Authorization: token },
         });
         const allBookings = bookingsRes.data?.listAll || bookingsRes.data || [];
         
-        // Filter bookings for this customer
         customerBookings = Array.isArray(allBookings) 
           ? allBookings.filter(booking => {
               const bookingCustomerId = booking.customer?._id || booking.customer;
@@ -49,20 +46,19 @@ export const fetchPaymentDetails = createAsyncThunk(
           : [];
       }
       
-      // Transform bookings into payment records
       const payments = customerBookings.map(booking => ({
         _id: booking._id,
         bookingId: booking._id,
         amount: (booking.quantity || 0) * (booking.cylinder?.price || 0),
         paymentStatus: booking.paymentStatus || 'pending',
-        paymentMethod: 'cash', // Default, can be updated if backend has this field
+        paymentMethod: 'cash', 
         createdAt: booking.createdAt || booking.bookingDate,
         paymentDate: booking.createdAt || booking.bookingDate,
       }));
       
       return payments;
     } catch (error) {
-      // For customers, return empty array instead of error
+      
       try {
         const accountRes = await axios.get('/api/account', {
           headers: { Authorization: token },
@@ -72,7 +68,7 @@ export const fetchPaymentDetails = createAsyncThunk(
           return [];
         }
       } catch (e) {
-        // Ignore
+      
       }
       
       return rejectWithValue(
@@ -82,7 +78,7 @@ export const fetchPaymentDetails = createAsyncThunk(
   }
 );
 
-// Fetch payment details by booking ID
+
 export const fetchPaymentByBookingId = createAsyncThunk(
   'paymentDetails/fetchPaymentByBookingId',
   async (bookingId, { rejectWithValue }) => {
@@ -103,7 +99,7 @@ export const fetchPaymentByBookingId = createAsyncThunk(
   }
 );
 
-// Fetch payment details by payment ID
+
 export const fetchPaymentById = createAsyncThunk(
   'paymentDetails/fetchPaymentById',
   async (paymentId, { rejectWithValue }) => {
@@ -121,7 +117,6 @@ export const fetchPaymentById = createAsyncThunk(
   }
 );
 
-// Process payment (create payment)
 export const processPayment = createAsyncThunk(
   'paymentDetails/processPayment',
   async (paymentData, { rejectWithValue }) => {
@@ -155,7 +150,7 @@ const paymentDetailsSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Fetch all payments
+    
     builder
       .addCase(fetchPaymentDetails.pending, (state) => {
         state.loading = true;
@@ -170,7 +165,7 @@ const paymentDetailsSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Fetch payment by booking ID
+    
     builder
       .addCase(fetchPaymentByBookingId.pending, (state) => {
         state.loading = true;
@@ -185,7 +180,7 @@ const paymentDetailsSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Fetch payment by ID
+    
     builder
       .addCase(fetchPaymentById.pending, (state) => {
         state.loading = true;
@@ -200,7 +195,7 @@ const paymentDetailsSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Process payment
+    
     builder
       .addCase(processPayment.pending, (state) => {
         state.paymentLoading = true;

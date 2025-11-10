@@ -9,7 +9,6 @@ const initialState = {
   updateError: null,
 };
 
-// Fetch customer profile
 export const fetchCustomerProfile = createAsyncThunk(
   'customerProfile/fetchProfile',
   async (_, { rejectWithValue }) => {
@@ -27,7 +26,6 @@ export const fetchCustomerProfile = createAsyncThunk(
   }
 );
 
-// Update customer profile
 export const updateCustomerProfile = createAsyncThunk(
   'customerProfile/updateProfile',
   async (formData, { rejectWithValue }) => {
@@ -60,7 +58,7 @@ const customerProfileSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Fetch profile
+  
     builder
       .addCase(fetchCustomerProfile.pending, (state) => {
         state.loading = true;
@@ -75,7 +73,7 @@ const customerProfileSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Update profile
+  
     builder
       .addCase(updateCustomerProfile.pending, (state) => {
         state.updateLoading = true;

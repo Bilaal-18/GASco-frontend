@@ -40,7 +40,7 @@ export default function ManageStocks() {
 
   const token = localStorage.getItem("token");
 
-  // 🔹 Fetch all stocks
+
   const fetchStocks = async () => {
     try {
       const res = await axios.get("/api/all", {
@@ -55,7 +55,7 @@ export default function ManageStocks() {
     }
   };
 
-  // 🔹 Fetch all cylinders
+  
   const fetchCylinders = async () => {
     try {
       const res = await axios.get("/api/list", {
@@ -73,13 +73,13 @@ export default function ManageStocks() {
     fetchCylinders();
   }, []);
 
-  // 🔹 Handle input change
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 🔹 Add or Update stock
+
   const handleSubmit = async () => {
     if (!formData.cylinderId || !formData.totalQuantity) {
       toast.error("Please fill all fields");
@@ -109,7 +109,7 @@ export default function ManageStocks() {
     }
   };
 
-  // 🔹 Delete stock
+  
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this stock?")) return;
     try {
@@ -124,7 +124,7 @@ export default function ManageStocks() {
     }
   };
 
-  // 🔹 Edit stock
+  
   const openEditDialog = (stock) => {
     setEditing(stock);
     setFormData({
@@ -139,7 +139,6 @@ export default function ManageStocks() {
       <Sidebar />
 
       <div className="p-6 bg-gray-50 min-h-screen ml-64 max-w-[calc(100%-16rem)]">
-        {/* 🔹 Header */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
           <h1 className="text-2xl font-bold text-gray-800">Manage Stock</h1>
 
@@ -226,7 +225,6 @@ export default function ManageStocks() {
           </div>
         </div>
 
-        {/* 🔹 Stock Cards */}
         {loading ? (
           <p className="text-gray-600">Loading stocks...</p>
         ) : stocks.length === 0 ? (

@@ -91,7 +91,7 @@ export default function PaymentDetails() {
           <p className="text-gray-600">View your payment history and transaction details</p>
         </div>
 
-        {/* Summary Cards */}
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card>
             <CardHeader className="pb-3">
@@ -119,7 +119,7 @@ export default function PaymentDetails() {
           </Card>
         </div>
 
-        {/* Filter Buttons */}
+      
         <div className="flex gap-2 mb-6">
           {["all", "paid", "pending", "failed"].map((status) => (
             <button

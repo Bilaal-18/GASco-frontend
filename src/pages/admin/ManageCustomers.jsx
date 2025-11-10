@@ -110,7 +110,7 @@ export default function ManageCustomers() {
     fetchAgents();
   }, []);
 
-  // Search filter
+  
   useEffect(() => {
     const filtered = customers.filter((c) =>
       c.username?.toLowerCase().includes(search.toLowerCase()) ||
@@ -121,7 +121,7 @@ export default function ManageCustomers() {
     setCurrentPage(1);
   }, [search, customers]);
 
-  // Pagination
+
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedCustomers = filteredCustomers.slice(
     startIndex,
@@ -157,7 +157,7 @@ export default function ManageCustomers() {
       username: customer.username || "",
       email: customer.email || "",
       phoneNo: customer.phoneNo || "",
-      password: "", // Don't populate password
+      password: "", 
       agent: customer.agent?._id || customer.agent || "",
       address: customer.address || {
         street: "",
@@ -186,7 +186,7 @@ export default function ManageCustomers() {
   };
 
   const handleSubmit = async () => {
-    // Validation
+  
     if (!formData.username || !formData.email || !formData.phoneNo) {
       toast.error("Please fill all required fields");
       return;
@@ -213,19 +213,17 @@ export default function ManageCustomers() {
         role: "customer",
       };
 
-      // Only include password if it's provided
+      
       if (formData.password) {
         submitData.password = formData.password;
       }
 
       if (editingCustomer) {
-        // Update existing customer
         await axios.put(`/api/updateCustomer/${editingCustomer._id}`, submitData, {
           headers: { Authorization: token },
         });
         toast.success("Customer updated successfully!");
       } else {
-        // Create new customer
         await axios.post("/api/register", submitData);
         toast.success("Customer added successfully!");
       }
@@ -283,7 +281,7 @@ export default function ManageCustomers() {
               </Button>
             </div>
 
-            {/* Table */}
+          
             <Table>
               <TableHeader>
                 <TableRow>
@@ -376,7 +374,7 @@ export default function ManageCustomers() {
               </TableBody>
             </Table>
 
-            {/* Pagination */}
+        
             {filteredCustomers.length > itemsPerPage && (
               <div className="flex justify-between items-center mt-4">
                 <p className="text-sm text-gray-500">
@@ -412,7 +410,7 @@ export default function ManageCustomers() {
           </CardContent>
         </Card>
 
-        {/* View Details Dialog */}
+        
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -486,7 +484,7 @@ export default function ManageCustomers() {
           </DialogContent>
         </Dialog>
 
-        {/* Add/Edit Customer Dialog */}
+    
         <Dialog open={formDialogOpen} onOpenChange={setFormDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>

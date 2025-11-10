@@ -19,14 +19,12 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
     }
   }, [paymentError, dispatch]);
 
-  // Load Razorpay script
+ 
   useEffect(() => {
-    // Check if Razorpay is already loaded
     if (window.Razorpay) {
       return;
     }
 
-    // Check if script is already being loaded
     const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
     if (existingScript) {
       return;
@@ -42,7 +40,6 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
     
     document.body.appendChild(script);
 
-    // Cleanup function - only remove if we added it
     return () => {
       const scriptToRemove = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
       if (scriptToRemove && scriptToRemove === script) {
@@ -57,19 +54,16 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
       return;
     }
 
-    // Check if already paid
     if (booking.paymentStatus === 'paid') {
       toast.info('This booking is already paid');
       return;
     }
 
-    // Check if booking is delivered - payment only allowed after delivery
     if (booking.status !== 'delivered') {
       toast.error('Payment can only be made after the cylinder is delivered. Please wait for delivery confirmation.');
       return;
     }
 
-    // Check if payment method is online
     if (booking.paymentMethod !== 'online') {
       toast.error('This booking is set for cash payment. Please contact your agent for cash payment.');
       return;
@@ -77,10 +71,7 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
 
     try {
       setLoading(true);
-
-      // Wait for Razorpay SDK to load if not already loaded
       if (!window.Razorpay) {
-        // Wait up to 5 seconds for Razorpay to load
         let attempts = 0;
         while (!window.Razorpay && attempts < 50) {
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -92,7 +83,6 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
         }
       }
 
-      // Create Razorpay order
       const orderResult = await dispatch(
         createPaymentOrder(booking._id)
       ).unwrap();
@@ -105,9 +95,6 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
         throw new Error('Payment gateway configuration error. Please contact support.');
       }
 
-      // Format phone number for Razorpay
-      // Razorpay expects 10-digit Indian mobile numbers without country code or + prefix
-      // Important: Razorpay standard checkout validates phone numbers strictly
       const formatPhoneNumber = (phone) => {
         if (!phone) {
           console.log('[Payment] No phone number provided');
@@ -115,10 +102,8 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
         }
         
         try {
-          // Convert to string and trim
+        
           let phoneStr = phone.toString().trim();
-          
-          // Remove all non-digit characters (including +, spaces, hyphens, etc.)
           let cleaned = phoneStr.replace(/\D/g, '');
           
           console.log('[Payment] Phone number formatting:', {
@@ -127,19 +112,16 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
             length: cleaned.length
           });
           
-          // Handle Indian country code (91)
           if (cleaned.startsWith('91') && cleaned.length === 12) {
             cleaned = cleaned.substring(2);
             console.log('[Payment] Removed country code 91:', cleaned);
           }
           
-          // If still longer than 10 digits, take last 10 (in case of other prefixes)
           if (cleaned.length > 10) {
             cleaned = cleaned.slice(-10);
             console.log('[Payment] Extracted last 10 digits:', cleaned);
           }
           
-          // Validate: must be exactly 10 digits and start with 6, 7, 8, or 9 (Indian mobile)
           if (cleaned.length === 10 && /^[6-9]\d{9}$/.test(cleaned)) {
             console.log('[Payment] Valid phone number formatted:', cleaned);
             return cleaned;
@@ -152,7 +134,6 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
             valid: cleaned.length === 10 && /^[6-9]\d{9}$/.test(cleaned)
           });
           
-          // Return empty string if invalid - don't pass to Razorpay
           return '';
         } catch (error) {
           console.error('[Payment] Error formatting phone number:', error);
@@ -172,31 +153,22 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
         phoneValue: customerPhone ? '***' + customerPhone.slice(-3) : 'none'
       });
 
-      // Build prefill object - only include valid fields
-      // CRITICAL: Razorpay standard checkout has very strict phone number validation
-      // Phone number MUST be exactly 10 digits, starting with 6-9, no country code, no +, no spaces
-      // If phone number is invalid, DO NOT include it in prefill to avoid Razorpay API errors
       const prefillData = {};
       
-      // Add name if available
       if (customerName && customerName.trim()) {
         prefillData.name = customerName.trim();
       }
       
-      // Add email if valid
       if (customerEmail && customerEmail.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim())) {
         prefillData.email = customerEmail.trim();
       }
       
-      // CRITICAL: Only include contact if it's PERFECTLY formatted
-      // Razorpay standard checkout is very strict about phone number format
-      // Must be exactly 10 digits, starting with 6-9, no special characters
       const isValidPhone = customerPhone && 
                           typeof customerPhone === 'string' &&
                           customerPhone.length === 10 && 
                           /^[6-9]\d{9}$/.test(customerPhone) &&
-                          customerPhone === customerPhone.trim() && // No leading/trailing spaces
-                          !/[^0-9]/.test(customerPhone); // Only digits, no +, -, spaces, etc.
+                          customerPhone === customerPhone.trim() && 
+                          !/[^0-9]/.test(customerPhone); 
       
       if (isValidPhone) {
         prefillData.contact = customerPhone;
@@ -209,7 +181,7 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
           type: typeof customerPhone,
           matchesPattern: customerPhone ? /^[6-9]\d{9}$/.test(customerPhone) : false
         });
-        // Do NOT include contact field at all - Razorpay will let user enter manually
+      
       }
 
       console.log('[Payment] Final prefill data (will be sent to Razorpay):', {
@@ -218,7 +190,6 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
         contactValue: 'contact' in prefillData ? '***' + prefillData.contact.slice(-3) : 'not included'
       });
 
-      // Initialize Razorpay checkout
       const options = {
         key: orderResult.keyId,
         amount: orderResult.amount,
@@ -229,7 +200,7 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
         handler: async function (response) {
           try {
             setLoading(true);
-            // Verify payment
+
             const verifyResult = await dispatch(
               verifyPayment({
                 razorpayOrderId: response.razorpay_order_id,
@@ -253,8 +224,7 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
             setLoading(false);
           }
         },
-        // Only include prefill object if we have at least one valid field
-        // This prevents Razorpay from trying to validate empty/invalid data
+        
         ...(Object.keys(prefillData).length > 0 && { prefill: prefillData }),
         theme: {
           color: '#2563eb',
@@ -271,28 +241,21 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
       };
 
       const razorpay = new window.Razorpay(options);
-      
-      // Add error handlers
+    
       razorpay.on('payment.failed', function (response) {
         console.error('Payment failed:', response);
         setLoading(false);
         toast.error(response.error?.description || 'Payment failed. Please try again.');
       });
 
-      // Handle Razorpay internal errors (like phone validation) that don't block payment
       razorpay.on('error', function (error) {
         console.warn('Razorpay error (may be non-critical):', error);
-        // Don't show error toast for validation errors - they're usually non-blocking
-        // Only log for debugging
       });
 
-      // Open Razorpay checkout
+      
       razorpay.open();
       
-      // Note: The 400 errors from Razorpay's standard_checkout API are usually
-      // non-critical validation attempts and don't prevent payment completion.
-      // They occur when Razorpay tries to validate customer data (phone, email).
-      // As long as we don't pass invalid data in prefill, payment should work.
+    
     } catch (error) {
       console.error('Payment initialization error:', error);
       const errorMessage = typeof error === 'string' 
@@ -303,11 +266,9 @@ export default function PaymentButton({ booking, onPaymentSuccess }) {
     }
   };
 
-  // Calculate total amount
   const totalAmount =
     (booking.quantity || 0) * (booking.cylinder?.price || 0);
 
-  // Only show payment button if booking is delivered and payment method is online
   if (booking.status !== 'delivered' || booking.paymentMethod !== 'online') {
     return null;
   }

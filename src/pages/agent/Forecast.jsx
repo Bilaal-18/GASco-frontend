@@ -5,10 +5,7 @@ import axios from "@/config/config";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
-/**
- * Agent Forecast Page
- * Displays demand forecast for the logged-in agent
- */
+
 export default function Forecast() {
   const [agentId, setAgentId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,12 +14,11 @@ export default function Forecast() {
   useEffect(() => {
     const fetchAgentId = async () => {
       try {
-        // Get agent ID from account endpoint
         const response = await axios.get("/api/account", {
           headers: { Authorization: token },
         });
         
-        // The account endpoint returns the user data with _id
+    
         if (response.data && response.data._id) {
           setAgentId(response.data._id);
         } else {

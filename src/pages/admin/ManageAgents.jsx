@@ -58,7 +58,6 @@ export default function ManageAgents() {
 
   const token = localStorage.getItem("token");
 
-  // 🔹 Fetch agents
   const fetchAgents = async () => {
     try {
       setLoading(true);
@@ -97,7 +96,6 @@ export default function ManageAgents() {
     }
   };
 
-  // ✅ Validation
   const validateForm = () => {
     const { agentname, email, password, phoneNo, vehicleNo } = formData;
     if (!agentname.trim()) return "Agent name is required";
@@ -170,7 +168,7 @@ export default function ManageAgents() {
     page * perPage
   );
 
-  // 🔍 Search
+  
   useEffect(() => {
     const result = agents.filter(
       (a) =>
@@ -307,7 +305,7 @@ export default function ManageAgents() {
           </CardHeader>
 
           <CardContent>
-            {/* Search */}
+            
             <div className="flex items-center gap-2 mb-4">
               <Search className="text-gray-500" size={18} />
               <Input
@@ -318,7 +316,7 @@ export default function ManageAgents() {
               />
             </div>
 
-            {/* Table */}
+          
             <div className="overflow-x-auto rounded-md border">
               <table className="w-full text-sm">
                 <thead className="bg-gray-100">
@@ -353,7 +351,7 @@ export default function ManageAgents() {
                           View
                         </Button>
 
-                        {/* ✅ Fixed Delete Dialog */}
+                      
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button size="sm" variant="destructive">
@@ -388,7 +386,7 @@ export default function ManageAgents() {
               </table>
             </div>
 
-            {/* Pagination */}
+            
             <div className="flex justify-between items-center mt-4">
               <p className="text-sm text-gray-500">
                 Page {page} of {totalPages || 1}
@@ -415,7 +413,7 @@ export default function ManageAgents() {
           </CardContent>
         </Card>
 
-        {/* 🔹 View Details Dialog */}
+        
         {viewAgent && (
           <Dialog open={!!viewAgent} onOpenChange={() => setViewAgent(null)}>
             <DialogContent className="max-w-lg">

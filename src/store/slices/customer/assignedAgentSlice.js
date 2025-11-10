@@ -7,21 +7,20 @@ const initialState = {
   error: null,
 };
 
-// Fetch assigned agent details
+
 export const fetchAssignedAgent = createAsyncThunk(
   'assignedAgent/fetchAgent',
   async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('token');
       
-      // Get user role first
+      
       const accountRes = await axios.get('/api/account', {
         headers: { Authorization: token },
       });
       
       const userRole = accountRes.data?.role;
       
-      // Use customer-specific endpoint if customer, otherwise use account endpoint
       if (userRole === 'customer') {
         try {
           const response = await axios.get('/api/customer/assigned-agent', {
@@ -29,10 +28,8 @@ export const fetchAssignedAgent = createAsyncThunk(
           });
           return response.data?.agent || response.data;
         } catch (agentError) {
-          // If agent endpoint fails, try to get from account
-          const agentId = accountRes.data?.agent;
+             const agentId = accountRes.data?.agent;
           if (agentId) {
-            // If agent is populated in account, use it
             if (typeof agentId === 'object' && agentId._id) {
               return agentId;
             }
@@ -40,7 +37,6 @@ export const fetchAssignedAgent = createAsyncThunk(
           return rejectWithValue(agentError.response?.data?.error || 'No agent assigned');
         }
       } else {
-        // For non-customers, try to get agent from account if available
         const agentId = accountRes.data?.agent;
         if (agentId && typeof agentId === 'object' && agentId._id) {
           return agentId;
@@ -55,7 +51,7 @@ export const fetchAssignedAgent = createAsyncThunk(
   }
 );
 
-// Fetch agent details by ID
+
 export const fetchAgentById = createAsyncThunk(
   'assignedAgent/fetchAgentById',
   async (agentId, { rejectWithValue }) => {
@@ -86,7 +82,7 @@ const assignedAgentSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Fetch assigned agent
+    
     builder
       .addCase(fetchAssignedAgent.pending, (state) => {
         state.loading = true;
@@ -101,7 +97,7 @@ const assignedAgentSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Fetch agent by ID
+    
     builder
       .addCase(fetchAgentById.pending, (state) => {
         state.loading = true;

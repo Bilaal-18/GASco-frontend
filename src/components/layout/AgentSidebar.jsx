@@ -32,6 +32,7 @@ const AgentSidebar = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     toast.info("Logout success!");
+
     navigate("/login");
   };
 
@@ -50,7 +51,6 @@ const AgentSidebar = () => {
         const bookingsData = res.data.bookings || res.data || [];
         setBookings(bookingsData);
         
-        // Calculate stats
         let totalStockSold = 0;
         let totalAmountReceived = 0;
         let totalAmountToBePaid = 0;
@@ -60,15 +60,12 @@ const AgentSidebar = () => {
           const price = booking.cylinder?.price || 0;
           const totalAmount = quantity * price;
 
-          // Total stock sold (all bookings)
+    
           totalStockSold += quantity;
 
-          // Amount received (paid bookings)
           if (booking.paymentStatus === "paid") {
             totalAmountReceived += totalAmount;
           }
-
-          // Amount to be paid (pending bookings)
           if (booking.paymentStatus === "pending") {
             totalAmountToBePaid += totalAmount;
           }
@@ -87,12 +84,11 @@ const AgentSidebar = () => {
     };
 
     fetchPaymentStats();
-    // Refresh stats every 30 seconds
     const interval = setInterval(fetchPaymentStats, 30000);
     return () => clearInterval(interval);
   }, [token]);
 
-  // Generate Daily Report
+
   const generateDailyReport = () => {
     if (!selectedDate) {
       toast.error("Please select a date");
@@ -108,7 +104,6 @@ const AgentSidebar = () => {
         year: 'numeric' 
       });
 
-      // Filter bookings for selected date
       const dailyBookings = bookings.filter((booking) => {
         const bookingDate = new Date(booking.createdAt);
         return (
@@ -126,13 +121,13 @@ const AgentSidebar = () => {
 
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       
-      // Header
+      
       doc.setFontSize(18);
       doc.text("GasCo Daily Sales Report", 105, 20, { align: "center" });
       doc.setFontSize(12);
       doc.text(`Date: ${selectedDateStr}`, 105, 28, { align: "center" });
 
-      // Summary
+    
       const totalCylinders = dailyBookings.reduce((sum, b) => sum + (b.quantity || 0), 0);
       const totalAmount = dailyBookings.reduce((sum, b) => {
         return sum + ((b.cylinder?.price || 0) * (b.quantity || 0));
@@ -157,7 +152,6 @@ const AgentSidebar = () => {
         styles: { fontSize: 10 },
       });
 
-      // Sales Details
       const startY = doc.lastAutoTable.finalY + 10;
       doc.setFontSize(14);
       doc.text("Sales Details", 14, startY);
@@ -194,7 +188,6 @@ const AgentSidebar = () => {
     }
   };
 
-  // Generate Date Range Report
   const generateDateRangeReport = () => {
     if (!startDate || !endDate) {
       toast.error("Please select both start and end dates");
@@ -211,9 +204,8 @@ const AgentSidebar = () => {
 
     setGenerating(true);
     try {
-      endDateObj.setHours(23, 59, 59, 999); // Include entire end date
+      endDateObj.setHours(23, 59, 59, 999); 
 
-      // Filter bookings for date range
       const rangeBookings = bookings.filter((booking) => {
         const bookingDate = new Date(booking.createdAt);
         return bookingDate >= startDateObj && bookingDate <= endDateObj;
@@ -226,14 +218,12 @@ const AgentSidebar = () => {
       }
 
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      
-      // Header
+    
       doc.setFontSize(18);
       doc.text("GasCo Sales Report (Date Range)", 105, 20, { align: "center" });
       doc.setFontSize(12);
       doc.text(`From: ${startDateObj.toLocaleDateString('en-GB')} To: ${endDateObj.toLocaleDateString('en-GB')}`, 105, 28, { align: "center" });
 
-      // Summary
       const totalCylinders = rangeBookings.reduce((sum, b) => sum + (b.quantity || 0), 0);
       const totalAmount = rangeBookings.reduce((sum, b) => {
         return sum + ((b.cylinder?.price || 0) * (b.quantity || 0));
@@ -259,7 +249,6 @@ const AgentSidebar = () => {
         styles: { fontSize: 10 },
       });
 
-      // Sales Details
       const startY = doc.lastAutoTable.finalY + 10;
       doc.setFontSize(14);
       doc.text("Sales Details", 14, startY);
@@ -298,7 +287,6 @@ const AgentSidebar = () => {
     }
   };
 
-  // Generate Monthly Report
   const generateMonthlyReport = () => {
     if (!selectedMonth) {
       toast.error("Please select a month");
@@ -310,7 +298,6 @@ const AgentSidebar = () => {
       const monthDate = selectedMonth instanceof Date ? selectedMonth : new Date(selectedMonth);
       const monthName = monthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-      // Filter bookings for selected month
       const monthlyBookings = bookings.filter((booking) => {
         const bookingDate = new Date(booking.createdAt);
         return (
@@ -327,13 +314,11 @@ const AgentSidebar = () => {
 
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       
-      // Header
       doc.setFontSize(18);
       doc.text("GasCo Monthly Sales Report", 105, 20, { align: "center" });
       doc.setFontSize(12);
       doc.text(`Month: ${monthName}`, 105, 28, { align: "center" });
 
-      // Summary
       const totalCylinders = monthlyBookings.reduce((sum, b) => sum + (b.quantity || 0), 0);
       const totalAmount = monthlyBookings.reduce((sum, b) => {
         return sum + ((b.cylinder?.price || 0) * (b.quantity || 0));
@@ -359,7 +344,6 @@ const AgentSidebar = () => {
         styles: { fontSize: 10 },
       });
 
-      // Daily Breakdown
       const dailyBreakdown = {};
       monthlyBookings.forEach((b) => {
         const date = new Date(b.createdAt).toLocaleDateString('en-GB');

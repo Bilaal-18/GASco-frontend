@@ -69,7 +69,7 @@ const AgentStock = () => {
 
   const token = localStorage.getItem("token");
 
-  // 🟢 Fetch Stocks
+
   const fetchStocks = async () => {
     try {
       const res = await axios.get("/api/ListAll", {
@@ -84,7 +84,6 @@ const AgentStock = () => {
     }
   };
 
-  // 🟢 Fetch Agents + Cylinders
   const fetchDropdownData = async () => {
     try {
       const [agentsRes, cylindersRes] = await Promise.all([
@@ -103,18 +102,17 @@ const AgentStock = () => {
     fetchDropdownData();
   }, []);
 
-  // 🟢 Handle Change
+
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // 🟢 Handle Cylinder Select
+
   const handleCylinderSelect = (id) => {
     const cylinder = cylinders.find((c) => c._id === id);
     setSelectedCylinder(cylinder);
     setFormData({ ...formData, cylinderId: id });
   };
 
-  // 🟢 Add Stock
   const handleAddStock = async () => {
     try {
       setLoading(true);
@@ -131,7 +129,6 @@ const AgentStock = () => {
     }
   };
 
-  // 🟡 Update Stock
   const handleUpdateStock = async () => {
     try {
       setLoading(true);
@@ -151,7 +148,7 @@ const AgentStock = () => {
     }
   };
 
-  // 🔴 Delete Stock
+  
   const handleDelete = async (agentId, cylinderId) => {
     // if (!window.confirm("Are you sure you want to delete this stock?")) return;
     try {
@@ -165,7 +162,7 @@ const AgentStock = () => {
     }
   };
 
-  // 🟢 Reset form
+  
   const resetForm = () => {
     setFormData({ agentId: "", cylinderId: "", quantity: "" });
     setSelectedCylinder(null);
@@ -173,7 +170,7 @@ const AgentStock = () => {
     setOpen(false);
   };
 
-  // 🟢 Edit Click
+
   const handleEditClick = (stock) => {
     setEditingStock(stock);
     setFormData({
@@ -186,18 +183,16 @@ const AgentStock = () => {
     setOpen(true);
   };
 
-  // 🟢 Filter by Agent and Search
+  
   useEffect(() => {
     let filtered = stocks;
 
-    // Filter by agent
     if (selectedAgent !== "all") {
       filtered = filtered.filter(
         (s) => s.agentId?._id === selectedAgent || s.agentId === selectedAgent
       );
     }
 
-    // Filter by search
     if (search) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter((s) => {
@@ -218,15 +213,15 @@ const AgentStock = () => {
     }
 
     setFilteredStocks(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1); 
   }, [selectedAgent, search, stocks]);
 
-  // 🟢 Filter by Agent (Dropdown version)
+
   const handleAgentSelect = (value) => {
     setSelectedAgent(value);
   };
 
-  // Pagination
+
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedStocks = filteredStocks.slice(
     startIndex,
@@ -234,7 +229,7 @@ const AgentStock = () => {
   );
   const totalPages = Math.ceil(filteredStocks.length / itemsPerPage);
 
-  // 📄 Full Report for all agents
+
   const generateReport = () => {
     const doc = new jsPDF();
     doc.text("Agent Stock Report", 14, 16);
@@ -257,7 +252,7 @@ const AgentStock = () => {
     doc.save(`AgentStockReport_${selectedAgent || "All"}.pdf`);
   };
 
-  // 📄 Single Agent Bill Generation
+
   const generateAgentBill = () => {
     if (selectedAgent === "all") {
       toast.error("Please select an agent to generate their bill.");
@@ -317,7 +312,7 @@ const AgentStock = () => {
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Agent Stock Management</h2>
           <div className="flex items-center gap-3">
-            {/* 🔍 Search */}
+            
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
@@ -328,7 +323,7 @@ const AgentStock = () => {
               />
             </div>
             
-            {/* 🔍 Filter by Agent Dropdown */}
+            
             <Select onValueChange={handleAgentSelect} value={selectedAgent}>
               <SelectTrigger className="w-52">
                 <SelectValue placeholder="Filter by Agent" />
@@ -351,7 +346,7 @@ const AgentStock = () => {
               <Receipt size={16} /> Generate Bill
             </Button>
 
-            {/* Existing Add/Edit Dialog */}
+            
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button className="flex items-center gap-2">
@@ -365,7 +360,7 @@ const AgentStock = () => {
                   </DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col gap-4 py-4">
-                  {/* Agent Select */}
+                  
                   <Select
                     disabled={!!editingStock}
                     onValueChange={(value) => setFormData({ ...formData, agentId: value })}
@@ -383,7 +378,7 @@ const AgentStock = () => {
                     </SelectContent>
                   </Select>
 
-                  {/* Cylinder Select */}
+                  
                   <Select
                     disabled={!!editingStock}
                     onValueChange={handleCylinderSelect}
@@ -401,7 +396,7 @@ const AgentStock = () => {
                     </SelectContent>
                   </Select>
 
-                  {/* Cylinder Info */}
+                  
                   {selectedCylinder && (
                     <div className="bg-gray-50 border p-3 rounded-md text-sm text-gray-700">
                       <p><strong>Type:</strong> {selectedCylinder.cylinderType}</p>
@@ -410,7 +405,7 @@ const AgentStock = () => {
                     </div>
                   )}
 
-                  {/* Quantity */}
+                  
                   <Input
                     name="quantity"
                     type="number"
@@ -437,7 +432,7 @@ const AgentStock = () => {
           </div>
         </div>
 
-        {/* Table */}
+      
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -520,7 +515,7 @@ const AgentStock = () => {
                   </TableBody>
                 </Table>
 
-                {/* Pagination */}
+                
                 {filteredStocks.length > itemsPerPage && (
                   <div className="flex justify-between items-center mt-4">
                     <p className="text-sm text-gray-500">
@@ -558,7 +553,6 @@ const AgentStock = () => {
           </CardContent>
         </Card>
 
-        {/* Summary */}
         <div className="flex justify-end">
           <Card className="p-4">
             <h3 className="text-lg font-semibold">

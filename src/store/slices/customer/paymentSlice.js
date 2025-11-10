@@ -10,7 +10,6 @@ const initialState = {
   currentOrder: null,
 };
 
-// Create Razorpay order
 export const createPaymentOrder = createAsyncThunk(
   'payment/createOrder',
   async (bookingId, { rejectWithValue }) => {
@@ -47,7 +46,6 @@ export const createPaymentOrder = createAsyncThunk(
   }
 );
 
-// Verify payment
 export const verifyPayment = createAsyncThunk(
   'payment/verify',
   async (paymentData, { rejectWithValue, dispatch }) => {
@@ -73,13 +71,13 @@ export const verifyPayment = createAsyncThunk(
         return rejectWithValue('Invalid response from server');
       }
       
-      // Refresh bookings after successful payment
+  
       try {
         const { fetchCustomerBookings } = await import('./customerBookingsSlice');
         dispatch(fetchCustomerBookings());
       } catch (importError) {
         console.warn('Failed to refresh bookings after payment:', importError);
-        // Don't fail payment verification if booking refresh fails
+  
       }
       
       return response.data;
@@ -93,7 +91,6 @@ export const verifyPayment = createAsyncThunk(
   }
 );
 
-// Fetch payment history
 export const fetchPaymentHistory = createAsyncThunk(
   'payment/fetchHistory',
   async (_, { rejectWithValue }) => {
@@ -124,7 +121,7 @@ const paymentSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Create order
+    
     builder
       .addCase(createPaymentOrder.pending, (state) => {
         state.paymentLoading = true;
@@ -138,7 +135,7 @@ const paymentSlice = createSlice({
         state.paymentLoading = false;
         state.paymentError = action.payload;
       })
-      // Verify payment
+    
       .addCase(verifyPayment.pending, (state) => {
         state.paymentLoading = true;
         state.paymentError = null;
@@ -151,7 +148,7 @@ const paymentSlice = createSlice({
         state.paymentLoading = false;
         state.paymentError = action.payload;
       })
-      // Fetch history
+    
       .addCase(fetchPaymentHistory.pending, (state) => {
         state.historyLoading = true;
         state.historyError = null;

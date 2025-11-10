@@ -85,13 +85,13 @@ export default function ProfileDashboard() {
     }
   };
 
-  // Fetch agent statistics
+
   const fetchStats = async () => {
     try {
       const agentId = agent?._id;
       if (!agentId || !token) return;
 
-      // Fetch stock, customers, and bookings in parallel
+      
       const [stockRes, customersRes, bookingsRes] = await Promise.all([
         axios.get(`/api/ownStock/${agentId}`, {
           headers: { Authorization: token },
@@ -104,21 +104,21 @@ export default function ProfileDashboard() {
         }).catch(() => ({ data: { bookings: [] } })),
       ]);
 
-      // Calculate total stock
+      
       const stocks = stockRes.data?.Ownstock || stockRes.data?.ownStock || stockRes.data || [];
       const stocksArray = Array.isArray(stocks) ? stocks : [];
       const totalStock = stocksArray.reduce((sum, stock) => sum + (stock.quantity || 0), 0);
 
-      // Calculate customers count
+    
       const customers = customersRes.data?.customers || customersRes.data || [];
       const customersArray = Array.isArray(customers) ? customers : [];
       const customersCount = customersArray.length;
 
-      // Calculate payments and today's bookings
+      
       const bookings = bookingsRes.data?.bookings || bookingsRes.data || [];
       const bookingsArray = Array.isArray(bookings) ? bookings : [];
       
-      // Calculate pending payments
+      
       const pendingPayments = bookingsArray
         .filter((b) => b.paymentStatus === "pending" && b.cylinder?.price)
         .reduce((sum, b) => {
@@ -127,7 +127,7 @@ export default function ProfileDashboard() {
           return sum + (price * quantity);
         }, 0);
 
-      // Count today's bookings
+      
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayBookings = bookingsArray.filter((b) => {
@@ -143,7 +143,7 @@ export default function ProfileDashboard() {
       });
     } catch (err) {
       console.error("Error fetching stats:", err);
-      // Set default values on error
+      
       setStats({
         totalStock: 0,
         customersCount: 0,
@@ -311,7 +311,7 @@ export default function ProfileDashboard() {
       <AgentSidebar />
 
       <div className="flex-1 ml-64 p-8">
-        {/* Header */}
+        
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">My Profile</h1>
@@ -333,11 +333,11 @@ export default function ProfileDashboard() {
           </div>
         </div>
 
-        {/* Profile Card */}
+        
         <Card className="mb-8 shadow-lg">
           <CardContent className="p-8">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-              {/* Profile Photo Upload */}
+              
               <div className="flex-shrink-0">
                 <ProfileImageUpload
                   currentImage={agent?.profilepic}
@@ -350,7 +350,7 @@ export default function ProfileDashboard() {
                 />
               </div>
               
-              {/* Agent Details */}
+            
               <div className="flex-1 text-center md:text-left">
                 <h2 className="text-3xl font-bold text-gray-800 mb-2">
                   {agent.agentname || "Agent"}
@@ -384,7 +384,7 @@ export default function ProfileDashboard() {
           </CardContent>
         </Card>
 
-        {/* Stats Section */}
+        
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -431,7 +431,7 @@ export default function ProfileDashboard() {
           </Card>
         </div>
 
-        {/* Address Details */}
+      
         {agent.address && (
           <Card className="shadow-md">
             <CardHeader>
@@ -463,7 +463,7 @@ export default function ProfileDashboard() {
           </Card>
         )}
 
-        {/* Edit Profile Dialog */}
+        
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -591,7 +591,7 @@ export default function ProfileDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Change Password Dialog */}
+        
         <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
           <DialogContent>
             <DialogHeader>

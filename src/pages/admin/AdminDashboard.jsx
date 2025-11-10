@@ -66,37 +66,28 @@ export default function AdminDashboard() {
       );
 
       const payments = paymentsRes.data?.payments || [];
-      // Calculate total payments received correctly (accounting for partial payments)
-      // For partial/paid/completed payments: prefer onlinePaid + cashPaid if available, otherwise use amount
-      // For pending/failed payments: don't count them
       const totalPayments = payments.reduce((sum, p) => {
-        // Skip pending or failed payments
         if (p.status === 'pending' || p.status === 'failed') {
           return sum;
         }
         
-        // For partial, paid, or completed payments, try to use onlinePaid + cashPaid first
         const onlinePaid = Number(p.onlinePaid || 0);
         const cashPaid = Number(p.cashPaid || 0);
         const hasPartialFields = onlinePaid > 0 || cashPaid > 0;
         
         if (hasPartialFields) {
-          // If onlinePaid or cashPaid exists, use their sum
           return sum + onlinePaid + cashPaid;
         } else {
-          // Otherwise, use the amount field
           return sum + (Number(p.amount || 0));
         }
       }, 0);
 
-      // Calculate pending amount by fetching all agents and their pending amounts
       let totalPending = 0;
       try {
         const agents = agentsRes.data || [];
         const pendingAmounts = await Promise.all(
           agents.map(async (agent) => {
             try {
-              // Get agent's stock
               let totalStockAmount = 0;
               try {
                 const stockRes = await axios.get(`/api/ownStock/${agent._id}`, {
@@ -107,39 +98,30 @@ export default function AdminDashboard() {
                   totalStockAmount = stocks.reduce((sum, s) => sum + (Number(s.totalAmount || 0)), 0);
                 }
               } catch (stockError) {
-                // If can't fetch stock, skip this agent
                 return 0;
               }
 
-              // Get agent's payments
               const agentPayments = payments.filter(p => 
                 p.agent?._id === agent._id || p.agent === agent._id
               );
               
-              // Calculate total paid
-              // For partial/paid/completed payments: prefer onlinePaid + cashPaid if available, otherwise use amount
-              // For pending/failed payments: don't count them
+            
               const totalPaid = agentPayments.reduce((sum, p) => {
-                // Skip pending or failed payments
                 if (p.status === 'pending' || p.status === 'failed') {
                   return sum;
                 }
                 
-                // For partial, paid, or completed payments, try to use onlinePaid + cashPaid first
                 const onlinePaid = Number(p.onlinePaid || 0);
                 const cashPaid = Number(p.cashPaid || 0);
                 const hasPartialFields = onlinePaid > 0 || cashPaid > 0;
                 
                 if (hasPartialFields) {
-                  // If onlinePaid or cashPaid exists, use their sum
                   return sum + onlinePaid + cashPaid;
                 } else {
-                  // Otherwise, use the amount field
                   return sum + (Number(p.amount || 0));
                 }
               }, 0);
 
-              // Pending = Total Stock - Total Paid
               const pending = Math.max(0, totalStockAmount - totalPaid);
               return pending;
             } catch (err) {
@@ -215,7 +197,6 @@ export default function AdminDashboard() {
         setCashAmount("");
         setCashDescription("");
         
-        // Refresh dashboard data
         setTimeout(() => {
           fetchSummary();
         }, 500);

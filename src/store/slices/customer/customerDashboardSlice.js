@@ -16,13 +16,11 @@ const initialState = {
   bookingError: null,
 };
 
-// Fetch customer dashboard summary
 export const fetchCustomerDashboard = createAsyncThunk(
   'customerDashboard/fetchSummary',
   async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('token');
-      // Get customer ID from account
       const accountRes = await axios.get('/api/account', {
         headers: { Authorization: token },
       });
@@ -31,20 +29,17 @@ export const fetchCustomerDashboard = createAsyncThunk(
       
       let bookings = [];
       
-      // Use customer-specific endpoint for customers, allBookings for admin/agent
       if (userRole === 'customer') {
         const bookingsRes = await axios.get('/api/customerBookings', {
           headers: { Authorization: token },
         });
         bookings = bookingsRes.data?.bookings || bookingsRes.data || [];
       } else {
-        // For admin/agent, use allBookings and filter
         const bookingsRes = await axios.get('/api/allBookings', {
           headers: { Authorization: token },
         });
         const allBookings = bookingsRes.data?.listAll || bookingsRes.data || [];
         
-        // Filter bookings for this customer
         bookings = Array.isArray(allBookings) 
           ? allBookings.filter(booking => {
               const bookingCustomerId = booking.customer?._id || booking.customer;
@@ -53,7 +48,6 @@ export const fetchCustomerDashboard = createAsyncThunk(
           : [];
       }
       
-      // Calculate total spent from bookings
       const totalSpent = bookings
         .filter(b => (b.status === 'completed' || b.status === 'delivered') && b.cylinder?.price)
         .reduce((sum, b) => {
@@ -70,7 +64,6 @@ export const fetchCustomerDashboard = createAsyncThunk(
         totalSpent: totalSpent,
       };
     } catch (error) {
-      // For customers, return default empty summary instead of error
       try {
         const accountRes = await axios.get('/api/account', {
           headers: { Authorization: token },
@@ -85,7 +78,7 @@ export const fetchCustomerDashboard = createAsyncThunk(
           };
         }
       } catch (e) {
-        // Ignore
+        
       }
       
       return rejectWithValue(
@@ -95,13 +88,12 @@ export const fetchCustomerDashboard = createAsyncThunk(
   }
 );
 
-// Book a cylinder
 export const bookCylinder = createAsyncThunk(
   'customerDashboard/bookCylinder',
   async (bookingData, { rejectWithValue, dispatch }) => {
     try {
       const token = localStorage.getItem('token');
-      // Ensure deliveryDate is sent if provided
+      
       const payload = { ...bookingData };
       if (payload.deliveryDate) {
         payload.deliveryDate = new Date(payload.deliveryDate).toISOString();
@@ -112,10 +104,8 @@ export const bookCylinder = createAsyncThunk(
       
       const booking = response.data?.booking || response.data;
       
-      // Refresh dashboard summary after booking
+    
       dispatch(fetchCustomerDashboard());
-      
-      // Also refresh customer bookings to show the new booking
       dispatch(fetchCustomerBookings());
       
       return booking;
@@ -127,7 +117,6 @@ export const bookCylinder = createAsyncThunk(
   }
 );
 
-// Update booking (dashboard version - refreshes dashboard after update)
 export const updateBookingFromDashboard = createAsyncThunk(
   'customerDashboard/updateBooking',
   async ({ bookingId, updateData }, { rejectWithValue, dispatch }) => {
@@ -141,7 +130,7 @@ export const updateBookingFromDashboard = createAsyncThunk(
         }
       );
       
-      // Refresh dashboard summary after update
+      
       dispatch(fetchCustomerDashboard());
       
       return response.data?.booking || response.data;
@@ -153,7 +142,7 @@ export const updateBookingFromDashboard = createAsyncThunk(
   }
 );
 
-// Cancel booking (dashboard version - refreshes dashboard after cancellation)
+
 export const cancelBookingFromDashboard = createAsyncThunk(
   'customerDashboard/cancelBooking',
   async (bookingId, { rejectWithValue, dispatch }) => {
@@ -167,7 +156,7 @@ export const cancelBookingFromDashboard = createAsyncThunk(
         }
       );
       
-      // Refresh dashboard summary after cancellation
+
       dispatch(fetchCustomerDashboard());
       
       return response.data?.booking || response.data;
@@ -206,7 +195,7 @@ const customerDashboardSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Book cylinder
+    
       .addCase(bookCylinder.pending, (state) => {
         state.bookingLoading = true;
         state.bookingError = null;
@@ -219,7 +208,7 @@ const customerDashboardSlice = createSlice({
         state.bookingLoading = false;
         state.bookingError = action.payload;
       })
-      // Update booking
+  
       .addCase(updateBookingFromDashboard.pending, (state) => {
         state.bookingLoading = true;
         state.bookingError = null;
@@ -232,7 +221,7 @@ const customerDashboardSlice = createSlice({
         state.bookingLoading = false;
         state.bookingError = action.payload;
       })
-      // Cancel booking
+    
       .addCase(cancelBookingFromDashboard.pending, (state) => {
         state.bookingLoading = true;
         state.bookingError = null;

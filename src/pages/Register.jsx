@@ -16,11 +16,11 @@ export default function Register() {
   const { handleRegister } = useContext(UserContext);
   const [role, setRole] = useState("agent");
 
-  // Yup validation schema
+
   const validationSchema = Yup.object().shape({
     role: Yup.string().required("Role is required"),
     
-    // Agent-specific validations
+  
     agentname: Yup.string().when("role", {
       is: "agent",
       then: (schema) => schema
@@ -42,7 +42,7 @@ export default function Register() {
       otherwise: (schema) => schema.notRequired(),
     }),
     
-    // Admin-specific validation
+    
     adminName: Yup.string().when("role", {
       is: "admin",
       then: (schema) => schema
@@ -53,7 +53,7 @@ export default function Register() {
       otherwise: (schema) => schema.notRequired(),
     }),
     
-    // Common field validations
+
     email: Yup.string()
       .required("Email is required")
       .email("Invalid email format")
@@ -104,11 +104,11 @@ export default function Register() {
     },
   });
 
-  // Update role in formik when select changes
+  
   const handleRoleChange = (value) => {
     setRole(value);
     formik.setFieldValue("role", value);
-    // Clear conditional fields when role changes
+  
     if (value === "admin") {
       formik.setFieldValue("agentname", "");
       formik.setFieldValue("vehicleNo", "");
@@ -137,7 +137,7 @@ export default function Register() {
             </CardHeader>
             <CardContent>
               <form onSubmit={formik.handleSubmit} className="space-y-4">
-                {/* Role Selection */}
+            
                 <div>
                   <Label>Register as</Label>
                   <Select
@@ -157,7 +157,7 @@ export default function Register() {
                   )}
                 </div>
 
-                {/* Conditional Fields - Agent */}
+              
                 {role === "agent" && (
                   <>
                     <div>
@@ -199,7 +199,7 @@ export default function Register() {
                   </>
                 )}
 
-                {/* Conditional Fields - Admin */}
+          
                 {role === "admin" && (
                   <div>
                     <Label>Admin Name</Label>
@@ -221,7 +221,7 @@ export default function Register() {
                   </div>
                 )}
 
-                {/* Common Fields */}
+            
                 <div>
                   <Label>Email</Label>
                   <Input

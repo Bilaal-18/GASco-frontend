@@ -69,14 +69,14 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch stats, today's bookings, and all bookings in parallel
+      
       const [statsRes, todayBookingsRes, allBookingsRes] = await Promise.all([
         axios.get("/api/getStats", { headers: { Authorization: token } }),
         axios.get("/api/todayBookings", { headers: { Authorization: token } }),
         axios.get("/api/agentBookings", { headers: { Authorization: token } }),
       ]);
 
-      // Set stats data
+      
       if (statsRes.data) {
         setStats({
           stockReceived: statsRes.data.stockReceived || 0,
@@ -95,23 +95,23 @@ const Dashboard = () => {
         });
       }
 
-      // Set today's bookings
+      
       const todayBookings = todayBookingsRes.data?.bookings || todayBookingsRes.data || [];
       const todayBookingsArray = Array.isArray(todayBookings) ? todayBookings : [];
       setTodayBookings(todayBookingsArray);
 
-      // Process all bookings to create daily data (only days with bookings)
+      
       const allBookings = allBookingsRes.data?.bookings || allBookingsRes.data || [];
       const allBookingsArray = Array.isArray(allBookings) ? allBookings : [];
       setAllBookings(allBookingsArray);
 
-      // Group bookings by date (only days with bookings)
+    
       const bookingsByDate = {};
       
       allBookingsArray.forEach((booking) => {
-        // Use createdAt as the booking date
+
         const bookingDate = new Date(booking.createdAt);
-        const dateKey = bookingDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        const dateKey = bookingDate.toISOString().split('T')[0]; 
         
         if (!bookingsByDate[dateKey]) {
           bookingsByDate[dateKey] = {
@@ -143,15 +143,14 @@ const Dashboard = () => {
         }
       });
 
-      // Convert to array and sort by date (most recent first, then show last 30 days)
+
       const dailyData = Object.values(bookingsByDate)
         .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .slice(0, 30) // Show last 30 days with bookings
-        .reverse(); // Reverse to show oldest first in chart
+        .slice(0, 30) 
+        .reverse(); 
       
       setDailyBookingData(dailyData);
 
-      // Calculate booking statistics
       if (allBookingsArray.length > 0) {
         const totalBookings = allBookingsArray.length;
         const totalCylinders = allBookingsArray.reduce((sum, b) => sum + (b.quantity || 0), 0);
@@ -159,14 +158,12 @@ const Dashboard = () => {
           return sum + ((b.cylinder?.price || 0) * (b.quantity || 0));
         }, 0);
         
-        // Find peak day (day with most cylinders) - use all data, not just last 30 days
         const allDailyData = Object.values(bookingsByDate)
           .sort((a, b) => new Date(b.date) - new Date(a.date));
         const peakDay = allDailyData.reduce((max, day) => {
           return day.totalCylinders > (max.totalCylinders || 0) ? day : max;
         }, { date: "", dateLabel: "", totalCylinders: 0 });
         
-        // Calculate average daily (only for days with bookings)
         const daysWithBookings = allDailyData.length;
         const averageDaily = daysWithBookings > 0 ? totalCylinders / daysWithBookings : 0;
         
@@ -233,7 +230,7 @@ const Dashboard = () => {
   useEffect(() => {
     fetchDashboardData();
     
-    // Fetch agent ID for customer forecasts
+
     const fetchAgentId = async () => {
       try {
         const res = await axios.get("/api/account", {
@@ -252,19 +249,17 @@ const Dashboard = () => {
     }
   }, [token]);
 
-  // Fetch customer forecasts when agentId is available (load cached data, don't refresh)
+
   useEffect(() => {
     if (agentId && token) {
-      fetchCustomerForecasts(false); // false = load cached data, don't make API calls
+      fetchCustomerForecasts(false); 
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentId, token]);
 
   return (
     <div className="flex bg-gray-50 min-h-screen">
       <AgentSidebar />
       <div className="flex-1 ml-64 p-8">
-        {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Agent Dashboard</h1>
@@ -282,7 +277,6 @@ const Dashboard = () => {
           </Button>
         </div>
 
-        {/* Stats Grid */}
         {loading ? (
           <div className="flex items-center justify-center h-32 text-gray-500 mb-8">
             <div className="text-center">
@@ -310,8 +304,6 @@ const Dashboard = () => {
             ))}
           </div>
         )}
-
-        {/* Today's Bookings */}
         {todayBookings.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
@@ -398,7 +390,7 @@ const Dashboard = () => {
           </Card>
         )}
 
-        {/* Booking Statistics Based on Actual Bookings */}
+      
         {dailyBookingData.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
@@ -433,7 +425,7 @@ const Dashboard = () => {
           </Card>
         )}
 
-        {/* Charts Section - Based on Actual Bookings */}
+        
         {dailyBookingData.length > 0 ? (
           <div className="grid md:grid-cols-2 gap-6 mb-10">
             <Card>
@@ -586,7 +578,7 @@ const Dashboard = () => {
           </Card>
         )}
 
-        {/* Customer Forecasts Section */}
+    
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">

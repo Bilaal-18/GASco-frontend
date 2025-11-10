@@ -57,7 +57,7 @@ export default function Payments() {
       setPayments(paymentsArray);
       setFilteredPayments(paymentsArray);
 
-      // Calculate stats
+    
       const totalAmount = paymentsArray.reduce((sum, p) => sum + (p.amount || 0), 0);
       const onlinePayments = paymentsArray.filter(p => p.method === "razorpay" || p.method === "online").length;
       const cashPayments = paymentsArray.filter(p => p.method === "cash").length;
@@ -81,7 +81,7 @@ export default function Payments() {
   useEffect(() => {
     let filtered = payments;
 
-    // Apply search filter
+  
     if (search) {
       filtered = filtered.filter((payment) => {
         const customerName = payment.customer?.username || payment.customer?.businessName || "";
@@ -96,7 +96,7 @@ export default function Payments() {
       });
     }
 
-    // Apply method filter
+  
     if (methodFilter !== "all") {
       filtered = filtered.filter((payment) => {
         if (methodFilter === "online") {
@@ -178,7 +178,7 @@ export default function Payments() {
           <p className="text-gray-600">View all customer payments received</p>
         </div>
 
-        {/* Stats Cards */}
+        
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <Card>
             <CardHeader className="pb-2">
@@ -214,7 +214,7 @@ export default function Payments() {
           </Card>
         </div>
 
-        {/* Filters */}
+      
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -246,7 +246,7 @@ export default function Payments() {
           </CardContent>
         </Card>
 
-        {/* Payments List */}
+        
         {filteredPayments.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
@@ -290,7 +290,7 @@ export default function Payments() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Customer Details */}
+                    
                     <div className="space-y-3">
                       <h3 className="font-semibold text-gray-700 flex items-center gap-2">
                         <User className="w-4 h-4" />
@@ -309,7 +309,7 @@ export default function Payments() {
                       </div>
                     </div>
 
-                    {/* Booking & Transaction Details */}
+                    
                     <div className="space-y-3">
                       <h3 className="font-semibold text-gray-700 flex items-center gap-2">
                         <Package className="w-4 h-4" />

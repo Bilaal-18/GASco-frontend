@@ -8,18 +8,15 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
   const [loading, setLoading] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(null);
   
-  // Razorpay safe transaction limit - start with a very conservative limit
-  // This will be automatically reduced if Razorpay rejects it
-  const RAZORPAY_SAFE_LIMIT = 25000; // ₹25,000 - very conservative limit that should work with all accounts
 
-  // Load Razorpay script
+  const RAZORPAY_SAFE_LIMIT = 25000; 
+
+
   useEffect(() => {
-    // Check if Razorpay is already loaded
     if (window.Razorpay) {
       return;
     }
 
-    // Check if script is already being loaded
     const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
     if (existingScript) {
       return;
@@ -35,7 +32,6 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
     
     document.body.appendChild(script);
 
-    // Cleanup function - only remove if we added it
     return () => {
       const scriptToRemove = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
       if (scriptToRemove && scriptToRemove === script) {
@@ -44,13 +40,10 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
     };
   }, []);
 
-  // Process a single payment with automatic retry on amount limit error
   const processSinglePayment = async (paymentAmount, paymentNumber, totalPayments, token, retryWithSmallerAmount = false) => {
     return new Promise((resolve, reject) => {
-      // If retrying with smaller amount, reduce it by half
       const actualAmount = retryWithSmallerAmount ? Math.floor(paymentAmount / 2) : paymentAmount;
       
-      // Create Razorpay order for this payment
       axios.post(
         '/api/agent/payment/create-order',
         { 
@@ -65,10 +58,8 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
         const orderResult = orderResponse.data;
 
         if (!orderResult || !orderResult.orderId) {
-          // Check if it's an amount limit error from backend
           const errorMsg = orderResult?.error || 'Failed to create payment order';
           if (errorMsg.toLowerCase().includes('amount exceeds') && !retryWithSmallerAmount && actualAmount > 1000) {
-            // Retry with smaller amount
             console.log(`Retrying payment with smaller amount: ${Math.floor(actualAmount / 2)}`);
             return processSinglePayment(paymentAmount, paymentNumber, totalPayments, token, true)
               .then(resolve)
@@ -83,7 +74,6 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
           return;
         }
 
-        // Initialize Razorpay checkout
         const options = {
           key: orderResult.keyId,
           amount: orderResult.amount,
@@ -93,7 +83,6 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
           order_id: orderResult.orderId,
           handler: async function (response) {
             try {
-              // Verify payment
               const verifyResponse = await axios.post(
                 '/api/agent/payment/verify',
                 {
@@ -101,7 +90,7 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
                   paymentId: response.razorpay_payment_id,
                   signature: response.razorpay_signature,
                   amount: actualAmount,
-                  totalDue: totalDue || amount, // Pass totalDue if provided
+                  totalDue: totalDue || amount, 
                   description: `Payment ${paymentNumber}/${totalPayments} for stock received from admin`,
                 },
                 {
@@ -136,13 +125,11 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
 
         const razorpay = new window.Razorpay(options);
         
-        // Add error handlers
         razorpay.on('payment.failed', function (response) {
           console.error('Payment failed:', response);
           const error = response.error || response;
           const errorMsg = error.description || error.message || 'Payment failed. Please try again.';
           
-          // Check if it's an amount limit error
           if (errorMsg.toLowerCase().includes('amount exceeds maximum') || 
               error.code === 'BAD_REQUEST_ERROR') {
             reject(new Error('AMOUNT_LIMIT_EXCEEDED'));
@@ -157,12 +144,10 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
           const errorObj = error.error || error;
           const errorMsg = errorObj.description || errorObj.message || 'Payment gateway error. Please try again.';
           
-          // Check if it's an amount limit error - mark it so the outer handler can retry
           if ((errorMsg.toLowerCase().includes('amount exceeds maximum') || 
                errorObj.code === 'BAD_REQUEST_ERROR' ||
                errorObj.field === 'amount' ||
                errorObj.reason === 'input_validation_failed')) {
-            // Reject with a special error that indicates we should retry with smaller amount
             reject(new Error('AMOUNT_LIMIT_EXCEEDED'));
             return;
           }
@@ -170,7 +155,6 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
           reject(new Error(errorMsg));
         });
 
-        // Open Razorpay checkout
         try {
           razorpay.open();
         } catch (openError) {
@@ -180,10 +164,9 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
       })
       .catch(error => {
         const errorMsg = error?.response?.data?.error || error?.message || 'Failed to create payment order';
-        // Check if it's an amount limit error from backend
+  
         if (errorMsg.toLowerCase().includes('amount exceeds') && !retryWithSmallerAmount && paymentAmount > 1000) {
           console.log(`Backend rejected amount ${paymentAmount}, retrying with smaller amount`);
-          // Retry with smaller amount
           return processSinglePayment(paymentAmount, paymentNumber, totalPayments, token, true)
             .then(resolve)
             .catch(reject);
@@ -194,7 +177,6 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
   };
 
   const handlePayment = async () => {
-    // Use customAmount if provided, otherwise use full amount
     const paymentAmount = customAmount && customAmount > 0 ? customAmount : amount;
     
     if (!paymentAmount || paymentAmount <= 0) {
@@ -210,9 +192,7 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
     try {
       setLoading(true);
 
-      // Wait for Razorpay SDK to load if not already loaded
       if (!window.Razorpay) {
-        // Wait up to 5 seconds for Razorpay to load
         let attempts = 0;
         while (!window.Razorpay && attempts < 50) {
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -229,8 +209,6 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
         throw new Error('Authentication required. Please login again.');
       }
 
-      // Always split payments into smaller chunks to avoid Razorpay limits
-      // This ensures any amount can be processed
       const payments = [];
       let remainingAmount = paymentAmount;
       let paymentNumber = 1;
@@ -251,7 +229,6 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
         toast.info(`Payment of ₹${paymentAmount.toLocaleString()} will be processed in ${totalPayments} transactions of up to ₹${RAZORPAY_SAFE_LIMIT.toLocaleString()} each.`, { duration: 6000 });
       }
 
-      // Process payments sequentially, handling any remaining amounts from retries
       const results = [];
       let actualTotalPaid = 0;
       
@@ -275,13 +252,10 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
           const paidAmount = result.actualAmount || payment.amount;
           actualTotalPaid += paidAmount;
           
-          // If payment was split due to limit, we need to handle the remaining amount
           if (result.remainingAmount && result.remainingAmount > 0) {
-            // Add remaining amount to next payment or create new payment
             if (i + 1 < payments.length) {
               payments[i + 1].amount += result.remainingAmount;
             } else {
-              // Add as new payment
               payments.push({
                 amount: result.remainingAmount,
                 number: payments.length + 1,
@@ -291,25 +265,22 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
           
           if (payment.number < payments.length) {
             toast.success(`Payment ${payment.number}/${payments.length} of ₹${paidAmount.toLocaleString()} completed!`, { duration: 3000 });
-            // Small delay between payments
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
         } catch (error) {
           console.error(`Payment ${payment.number} failed:`, error);
           
-          // Check if it's an amount limit error - automatically reduce and retry
+          
           if (error.message === 'AMOUNT_LIMIT_EXCEEDED' || 
               error.message.toLowerCase().includes('amount exceeds')) {
             
             if (payment.amount > 1000) {
-              // Reduce amount by half and retry
               const newAmount = Math.floor(payment.amount / 2);
               toast.warning(
                 `Payment amount ₹${payment.amount.toLocaleString()} exceeds limit. Reducing to ₹${newAmount.toLocaleString()} and retrying...`, 
                 { duration: 4000 }
               );
               
-              // Update payment amount and add remainder to next payment or create new one
               const remainder = payment.amount - newAmount;
               payment.amount = newAmount;
               
@@ -324,24 +295,22 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
                 }
               }
               
-              // Retry this payment with smaller amount
-              i--; // Go back to retry this payment
+          
+              i--; 
               await new Promise(resolve => setTimeout(resolve, 1000));
               continue;
             } else {
-              // Amount is already too small, this is a real error
               setLoading(false);
               setProcessingPayment(null);
               toast.error(`Payment failed: Amount ₹${payment.amount.toLocaleString()} is too small or account has very low limits. Please contact admin.`);
               return;
             }
           }
-          
-          // Other errors
+      
           setLoading(false);
           setProcessingPayment(null);
           toast.error(`Payment ${payment.number}/${payments.length} failed: ${error.message}`);
-          return; // Stop processing remaining payments
+          return; 
         }
       }
 
@@ -367,19 +336,16 @@ export default function AgentPaymentButton({ amount, onPaymentSuccess, disabled,
     }
   };
 
-  // Auto-trigger payment if autoTrigger prop is true
   useEffect(() => {
     if (autoTrigger && !loading && !processingPayment) {
       const paymentAmount = customAmount && customAmount > 0 ? customAmount : amount;
       if (paymentAmount > 0 && window.Razorpay) {
-        // Small delay to ensure everything is ready
         const timer = setTimeout(() => {
           handlePayment();
         }, 100);
         return () => clearTimeout(timer);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoTrigger]);
 
   const getButtonText = () => {

@@ -31,7 +31,6 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Fix for default marker icons in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -39,7 +38,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-// Component to handle map bounds when a marker is selected
 function MapBounds({ center, zoom }) {
   const map = useMap();
   useEffect(() => {
@@ -60,7 +58,7 @@ export default function Bookings() {
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [selectedDate, setSelectedDate] = useState(new Date()); // Default to today
+  const [selectedDate, setSelectedDate] = useState(new Date()); 
   const [updatingBooking, setUpdatingBooking] = useState(null);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [customers, setCustomers] = useState([]);
@@ -107,7 +105,6 @@ export default function Bookings() {
       console.log(`Fetched ${customersArray.length} customers for agent ${agentId}`);
       console.log("Customers:", customersArray.map(c => ({ id: c._id, name: c.username || c.businessname })));
       
-      // Filter to only show customers that have an agent assigned (should already be filtered by backend, but double-check)
       const validCustomers = customersArray.filter(customer => customer._id);
       setCustomers(validCustomers);
       
@@ -130,7 +127,6 @@ export default function Bookings() {
       });
       const stocksData = res.data?.Ownstock || res.data?.ownStock || res.data || [];
       const stocksArray = Array.isArray(stocksData) ? stocksData : [];
-      // Filter stocks with quantity > 0
       const availableStocks = stocksArray.filter(stock => stock.quantity > 0);
       setAvailableStocks(availableStocks);
     } catch (err) {
@@ -161,7 +157,6 @@ export default function Bookings() {
       
       console.log("Bookings API Response:", res.data); 
       
-      // Handle different response formats
       const bookingsData = res.data.bookings || res.data || [];
       setBookings(Array.isArray(bookingsData) ? bookingsData : []);
       setFilteredBookings(Array.isArray(bookingsData) ? bookingsData : []);
@@ -197,7 +192,6 @@ export default function Bookings() {
   useEffect(() => {
     let filtered = bookings;
 
-    // Apply date filter (filter by booking date - createdAt or deliveryDate)
     if (selectedDate) {
       const selectedDateObj = selectedDate instanceof Date ? selectedDate : new Date(selectedDate);
       const startOfDay = new Date(selectedDateObj);
@@ -207,17 +201,13 @@ export default function Bookings() {
 
       filtered = filtered.filter((booking) => {
         const bookingDate = new Date(booking.createdAt);
-        // Check deliveryDate if available (for future bookings)
         const deliveryDate = booking.deliveryDate ? new Date(booking.deliveryDate) : null;
         
-        // Normalize dates to compare only the date part (ignore time)
         const bookingDateOnly = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate());
         const deliveryDateOnly = deliveryDate ? new Date(deliveryDate.getFullYear(), deliveryDate.getMonth(), deliveryDate.getDate()) : null;
         const selectedDateOnly = new Date(startOfDay.getFullYear(), startOfDay.getMonth(), startOfDay.getDate());
         
-        // Match if:
-        // 1. Booking was created on selected date, OR
-        // 2. Booking has delivery date on selected date (for future bookings)
+    
         const matchesCreatedDate = bookingDateOnly.getTime() === selectedDateOnly.getTime();
         const matchesDeliveryDate = deliveryDateOnly && deliveryDateOnly.getTime() === selectedDateOnly.getTime();
         
@@ -225,7 +215,6 @@ export default function Bookings() {
       });
     }
 
-    // Apply search filter
     if (search) {
       filtered = filtered.filter((booking) => {
         const customerName = booking.customer?.username || booking.customer?.businessName || "";
@@ -240,12 +229,12 @@ export default function Bookings() {
       });
     }
 
-    // Apply status filter
+  
     if (statusFilter !== "all") {
       filtered = filtered.filter((booking) => booking.status === statusFilter);
     }
 
-    // Apply payment filter
+  
     if (paymentFilter !== "all") {
       filtered = filtered.filter((booking) => booking.paymentStatus === paymentFilter);
     }
@@ -267,7 +256,7 @@ export default function Bookings() {
       
       toast.success("Booking updated successfully!");
       
-      // Refresh bookings
+    
       await fetchBookings();
       setUpdatingBooking(null);
     } catch (err) {
@@ -287,8 +276,6 @@ export default function Bookings() {
   };
 
   const handleReturnedToggle = (bookingId, currentStatus) => {
-    // Check if backend supports isReturned update
-    // For now, we'll try to update it along with status
     handleUpdateBooking(bookingId, { isReturned: !currentStatus });
   };
 
@@ -298,7 +285,7 @@ export default function Bookings() {
       return;
     }
 
-    // Check stock availability
+  
     const selectedStock = availableStocks.find(s => s.cylinderId._id === bookingFormData.cylinderId);
     if (!selectedStock || selectedStock.quantity < bookingFormData.quantity) {
       toast.error("Insufficient stock available");
@@ -308,7 +295,6 @@ export default function Bookings() {
     try {
       setCreatingBooking(true);
       
-      // Validate customerId is selected
       if (!bookingFormData.customerId) {
         toast.error("Please select a customer");
         setCreatingBooking(false);
@@ -333,7 +319,7 @@ export default function Bookings() {
 
       toast.success(res.data.message || "Booking created successfully!");
       
-      // Reset form and close dialog
+      
       setBookingFormData({
         customerId: "",
         cylinderId: "",
@@ -343,16 +329,15 @@ export default function Bookings() {
       });
       setBookingDialogOpen(false);
 
-      // Refresh bookings list and stock
+    
       await fetchBookings();
-      await fetchAvailableStocks(); // Refresh stock after booking
+      await fetchAvailableStocks(); 
     } catch (err) {
       console.error("Error creating booking:", err);
       console.error("Error response:", err?.response?.data);
       const errorMessage = err?.response?.data?.error || "Failed to create booking";
       toast.error(errorMessage);
       
-      // If customer doesn't have agent assigned, refresh customer list
       if (errorMessage.includes("agent assigned") || errorMessage.includes("not assigned to you")) {
         await fetchCustomers();
       }
@@ -428,7 +413,6 @@ export default function Bookings() {
     );
   }
 
-  // Calculate stats based on filtered bookings (respects date filter)
   const totalRevenue = filteredBookings
     .filter((b) => b.paymentStatus === "paid")
     .reduce((sum, b) => sum + calculateTotalAmount(b), 0);
@@ -488,7 +472,7 @@ export default function Bookings() {
           </div>
         </div>
 
-        {/* Stats Cards - Based on Filtered Bookings */}
+        
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
           <Card>
             <CardHeader className="pb-2">
@@ -570,11 +554,11 @@ export default function Bookings() {
           </Card>
         </div>
 
-        {/* Filters */}
+      
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="space-y-4">
-              {/* Date Filter - Prominent */}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                 <div className="md:col-span-2 lg:col-span-1">
                   <CustomDatePicker
@@ -694,7 +678,6 @@ export default function Bookings() {
           </CardContent>
         </Card>
 
-        {/* Bookings List */}
         {filteredBookings.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
@@ -795,7 +778,7 @@ export default function Bookings() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {/* Customer Details */}
+                      
                       <div className="space-y-3">
                         <h3 className="font-semibold text-gray-700 flex items-center gap-2">
                           <User className="w-4 h-4" />
@@ -828,7 +811,7 @@ export default function Bookings() {
                         </div>
                       </div>
 
-                      {/* Cylinder Details */}
+                    
                       <div className="space-y-3">
                         <h3 className="font-semibold text-gray-700 flex items-center gap-2">
                           <Package className="w-4 h-4" />
@@ -857,7 +840,7 @@ export default function Bookings() {
                         </div>
                       </div>
 
-                      {/* Financial Details & Actions */}
+                      
                       <div className="space-y-3">
                         <h3 className="font-semibold text-gray-700 flex items-center gap-2">
                           <DollarSign className="w-4 h-4" />
@@ -871,7 +854,7 @@ export default function Bookings() {
                             </span>
                           </div>
                           
-                          {/* Payment Method Display */}
+                        
                           <div className="flex justify-between items-center p-2 border rounded">
                             <span className="text-gray-600">Payment Method:</span>
                             <Badge variant="outline" className={booking.paymentMethod === "online" ? "bg-purple-50 text-purple-700 border-purple-300" : "bg-gray-50 text-gray-700 border-gray-300"}>
@@ -879,7 +862,7 @@ export default function Bookings() {
                             </Badge>
                           </div>
 
-                          {/* Payment Status Update */}
+                          
                           <div className="flex justify-between items-center p-2 border rounded">
                             <span className="text-gray-600">Payment Status:</span>
                             <div className="flex items-center gap-2">
@@ -902,7 +885,7 @@ export default function Bookings() {
                             </div>
                           </div>
 
-                          {/* Delivery Status Update */}
+                      
                           <div className="flex justify-between items-center p-2 border rounded">
                             <span className="text-gray-600">Delivery Status:</span>
                             <div className="flex items-center gap-2">
@@ -921,7 +904,7 @@ export default function Bookings() {
                             </div>
                           </div>
 
-                          {/* Cylinder Returned Update */}
+                          
                           <div className="flex justify-between items-center p-2 border rounded">
                             <span className="text-gray-600">Cylinder Returned:</span>
                             <div className="flex items-center gap-2">
@@ -963,7 +946,7 @@ export default function Bookings() {
           </div>
         )}
 
-        {/* Book for Customer Dialog */}
+        
         <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -973,7 +956,7 @@ export default function Bookings() {
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-4">
-              {/* Customer Selection */}
+          
               <div>
                 <Label htmlFor="customer">Select Customer *</Label>
                 <select
@@ -1002,7 +985,7 @@ export default function Bookings() {
                 )}
               </div>
 
-              {/* Cylinder Selection */}
+              
               <div>
                 <Label htmlFor="cylinder">Select Cylinder *</Label>
                 <select
@@ -1031,7 +1014,6 @@ export default function Bookings() {
                 )}
               </div>
 
-              {/* Quantity */}
               <div>
                 <Label htmlFor="quantity">Quantity *</Label>
                 <Input
@@ -1059,7 +1041,6 @@ export default function Bookings() {
                 )}
               </div>
 
-              {/* Payment Method */}
               <div>
                 <Label htmlFor="paymentMethod">Payment Method *</Label>
                 <select
@@ -1074,7 +1055,6 @@ export default function Bookings() {
                 </select>
               </div>
 
-              {/* Delivery Date */}
               <div>
                 <Label htmlFor="deliveryDate">Delivery Date (Optional)</Label>
                 <CustomDatePicker
@@ -1086,7 +1066,6 @@ export default function Bookings() {
                 />
               </div>
 
-              {/* Total Amount Preview */}
               {bookingFormData.cylinderId && bookingFormData.quantity > 0 && (
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-gray-600">Total Amount:</p>
@@ -1099,7 +1078,6 @@ export default function Bookings() {
                 </div>
               )}
 
-              {/* Action Buttons */}
               <div className="flex justify-end gap-2 pt-4">
                 <Button
                   variant="outline"
@@ -1133,7 +1111,7 @@ export default function Bookings() {
           </DialogContent>
         </Dialog>
 
-        {/* Map Dialog */}
+  
         <Dialog open={mapDialogOpen} onOpenChange={setMapDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>

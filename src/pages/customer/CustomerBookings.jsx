@@ -273,10 +273,10 @@ export default function CustomerBookings() {
                   return (
                     <Card key={booking._id} className="overflow-hidden">
                       <CardContent className="p-0">
-                        {/* Main Booking Row */}
+                        
                         <div className="p-6 hover:bg-gray-50 transition-colors">
                           <div className="flex flex-col md:flex-row md:items-center gap-4">
-                            {/* Booking Info */}
+                          
                             <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-4">
                               <div>
                                 <p className="text-xs text-gray-500 mb-1">Booking ID</p>
@@ -306,7 +306,7 @@ export default function CustomerBookings() {
                               </div>
                             </div>
 
-                            {/* Actions */}
+                          
                             <div className="flex gap-2 flex-wrap items-center">
                               <Button
                                 variant="outline"
@@ -338,11 +338,11 @@ export default function CustomerBookings() {
                           </div>
                         </div>
 
-                        {/* Expanded Details */}
+                    
                         {isExpanded && (
                           <div className="border-t bg-gray-50 p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                              {/* Cylinder Details */}
+                              
                               <div>
                                 <h4 className="font-semibold mb-3 flex items-center gap-2">
                                   <Package className="w-4 h-4" />
@@ -372,7 +372,7 @@ export default function CustomerBookings() {
                                 </div>
                               </div>
 
-                              {/* Order Information */}
+                            
                               <div>
                                 <h4 className="font-semibold mb-3 flex items-center gap-2">
                                   <Calendar className="w-4 h-4" />
@@ -410,7 +410,7 @@ export default function CustomerBookings() {
                                 </div>
                               </div>
 
-                              {/* Payment & Agent Info */}
+                              
                               <div>
                                 <h4 className="font-semibold mb-3 flex items-center gap-2">
                                   <DollarSign className="w-4 h-4" />
@@ -474,7 +474,7 @@ export default function CustomerBookings() {
                                   )}
                                 </div>
                                 
-                                {/* Action Buttons */}
+                            
                                 <div className="flex flex-col gap-2 mt-4">
                                   {/* Payment button only shows for delivered bookings with online payment method */}
                                   {booking.status === "delivered" && booking.paymentStatus !== "paid" && booking.paymentMethod === "online" && (
@@ -534,7 +534,7 @@ export default function CustomerBookings() {
                   })}
                 </div>
 
-                {/* Pagination */}
+            
                 {totalPages > 1 && (
                   <div className="mt-6 flex items-center justify-between">
                     <div className="text-sm text-gray-600">
@@ -553,7 +553,7 @@ export default function CustomerBookings() {
                       <div className="flex items-center gap-1">
                         {Array.from({ length: totalPages }, (_, i) => i + 1)
                           .filter((page) => {
-                            // Show first page, last page, current page, and pages around current
+                            
                             if (totalPages <= 7) return true;
                             if (page === 1 || page === totalPages) return true;
                             if (Math.abs(page - currentPage) <= 1) return true;

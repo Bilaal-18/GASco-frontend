@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 
 // Import Sidebar component - navigation menu for admin panel
-import Sidebar from "@/components/layout/Sidebar";
+import Sidebar from "@/components/layout/SideBar";
 
 // Import UI components from shadcn/ui library - these are reusable UI elements
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"; // Card container for displaying content

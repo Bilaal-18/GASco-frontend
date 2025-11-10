@@ -10,62 +10,75 @@ const initialState = {
 // Fetch available cylinder types
 export const fetchAvailableCylinders = createAsyncThunk(
   'availableCylinders/fetchCylinders',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
       const token = localStorage.getItem('token');
       let cylinders = [];
       
-      // Try /api/list first (for admin/agent)
+      // Check user role from state or try to determine it
+      // For customers, fetch from their assigned agent's stock
       try {
-        const response = await axios.get('/api/list', {
+        const customerCylindersRes = await axios.get('/api/customer/agent-cylinders', {
           headers: { Authorization: token },
         });
-        cylinders = response.data || [];
-      } catch (listError) {
-        // If unauthorized, try alternative: fetch by type to get all types
-        // We'll fetch commercial and private Commercial separately
-        try {
-          const [commercialRes, privateRes] = await Promise.all([
-            axios.get('/api/listOf/type', {
-              headers: { Authorization: token },
-              params: { type: 'commercial' },
-            }).catch(() => ({ data: [] })),
-            axios.get('/api/listOf/type', {
-              headers: { Authorization: token },
-              params: { type: 'private Commercial' },
-            }).catch(() => ({ data: [] })),
-          ]);
-          
-          cylinders = [
-            ...(Array.isArray(commercialRes.data) ? commercialRes.data : []),
-            ...(Array.isArray(privateRes.data) ? privateRes.data : []),
-          ];
-        } catch (typeError) {
-          // If both fail, return empty array
-          cylinders = [];
-        }
-      }
-      
-      // Add totalQuantity if needed from inventory (optional, might fail for customers)
-      try {
-        const stockRes = await axios.get('/api/all', {
-          headers: { Authorization: token },
-        });
-        const stocks = stockRes.data?.Inventary || stockRes.data || [];
         
-        // Map cylinders with stock quantities
-        return cylinders.map(cylinder => {
-          const stock = Array.isArray(stocks) 
-            ? stocks.find(s => s.cylinderId?._id === cylinder._id || s.cylinderId === cylinder._id)
-            : null;
-          return {
-            ...cylinder,
-            totalQuantity: stock?.totalQuantity || 0,
-          };
-        });
-      } catch (stockError) {
-        // If stock fetch fails, just return cylinders without quantity
-        return cylinders.map(cylinder => ({ ...cylinder, totalQuantity: undefined }));
+        // If successful, this is a customer and we got agent stock
+        cylinders = customerCylindersRes.data?.cylinders || [];
+        return cylinders; // Already has totalQuantity from agent stock
+      } catch (customerError) {
+        // Not a customer or endpoint doesn't exist, try other methods
+        // Try /api/list first (for admin/agent)
+        try {
+          const response = await axios.get('/api/list', {
+            headers: { Authorization: token },
+          });
+          cylinders = response.data || [];
+        } catch (listError) {
+          // If unauthorized, try alternative: fetch by type to get all types
+          // We'll fetch commercial and private Commercial separately
+          try {
+            const [commercialRes, privateRes] = await Promise.all([
+              axios.get('/api/listOf/type', {
+                headers: { Authorization: token },
+                params: { type: 'commercial' },
+              }).catch(() => ({ data: [] })),
+              axios.get('/api/listOf/type', {
+                headers: { Authorization: token },
+                params: { type: 'private Commercial' },
+              }).catch(() => ({ data: [] })),
+            ]);
+            
+            cylinders = [
+              ...(Array.isArray(commercialRes.data) ? commercialRes.data : []),
+              ...(Array.isArray(privateRes.data) ? privateRes.data : []),
+            ];
+          } catch (typeError) {
+            // If both fail, return empty array
+            cylinders = [];
+          }
+        }
+        
+        // Add totalQuantity if needed from inventory (optional, might fail for customers)
+        try {
+          const stockRes = await axios.get('/api/all', {
+            headers: { Authorization: token },
+          });
+          const stocks = stockRes.data?.Inventary || stockRes.data || [];
+          
+          // Map cylinders with stock quantities
+          return cylinders.map(cylinder => {
+            const stock = Array.isArray(stocks) 
+              ? stocks.find(s => s.cylinderId?._id === cylinder._id || s.cylinderId === cylinder._id)
+              : null;
+            return {
+              ...cylinder,
+              totalQuantity: stock?.totalQuantity || 0,
+            };
+          });
+        } catch (stockError) {
+          // If stock fetch fails, just return cylinders without quantity
+          return cylinders.map(cylinder => ({ ...cylinder, totalQuantity: undefined }));
+        }
       }
     } catch (error) {
       return rejectWithValue(

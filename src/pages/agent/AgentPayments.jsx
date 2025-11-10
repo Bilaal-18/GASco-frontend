@@ -39,16 +39,31 @@ export default function AgentPayments() {
     unpaidStocks: [],
   });
   const [loading, setLoading] = useState(true);
-  const [cashPaymentDialogOpen, setCashPaymentDialogOpen] = useState(false);
-  const [cashPaymentAmount, setCashPaymentAmount] = useState("");
-  const [cashPaymentDescription, setCashPaymentDescription] = useState("");
-  const [cashPaymentNotes, setCashPaymentNotes] = useState("");
-  const [submittingCashPayment, setSubmittingCashPayment] = useState(false);
+  const [onlinePaymentDialogOpen, setOnlinePaymentDialogOpen] = useState(false);
+  const [onlinePaymentAmount, setOnlinePaymentAmount] = useState("");
+  const [processingOnlinePayment, setProcessingOnlinePayment] = useState(false);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
     fetchPaymentHistory();
   }, [token]);
+
+  // Load Razorpay script
+  useEffect(() => {
+    if (window.Razorpay) return;
+    
+    const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existingScript) return;
+
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onerror = () => {
+      console.error('Failed to load Razorpay SDK');
+      toast.error('Failed to load payment gateway. Please refresh the page.');
+    };
+    document.body.appendChild(script);
+  }, []);
 
   const fetchPaymentHistory = async () => {
     if (!token) {
@@ -66,12 +81,22 @@ export default function AgentPayments() {
 
       const data = res.data || {};
       setPaymentHistory(data.payments || []);
-      setStockInfo({
+      
+      const stockInfoData = {
         totalStockAmount: data.stockInfo?.totalStockAmount || 0,
         unpaidStockAmount: data.stockInfo?.unpaidStockAmount || 0,
         paidStockAmount: data.stockInfo?.paidStockAmount || 0,
         unpaidStocks: data.stockInfo?.unpaidStocks || [],
+      };
+      
+      // Debug logging
+      console.log('Agent Payment History Data:', {
+        stockInfo: stockInfoData,
+        paymentsCount: data.payments?.length || 0,
+        rawData: data.stockInfo
       });
+      
+      setStockInfo(stockInfoData);
     } catch (err) {
       console.error("Error fetching agent payment history:", err);
       // If endpoint doesn't exist, set empty data
@@ -91,46 +116,147 @@ export default function AgentPayments() {
     }
   };
 
-  const handleCashPayment = async (e) => {
-    e.preventDefault();
+  const handleOnlinePayment = async () => {
+    const paymentAmount = parseFloat(onlinePaymentAmount);
     
-    if (!cashPaymentAmount || parseFloat(cashPaymentAmount) <= 0) {
+    if (!paymentAmount || paymentAmount <= 0) {
       toast.error("Please enter a valid amount");
       return;
     }
 
-    if (parseFloat(cashPaymentAmount) > stockInfo.unpaidStockAmount) {
-      toast.error("Payment amount cannot exceed unpaid stock amount");
+    // Allow agent to enter any desired amount (not limited to unpaid amount)
+    if (paymentAmount < 1) {
+      toast.error("Minimum payment amount is ₹1");
       return;
     }
 
     try {
-      setSubmittingCashPayment(true);
-      const res = await axios.post(
-        "/api/agent/payment/cash",
-        {
-          amount: parseFloat(cashPaymentAmount),
-          description: cashPaymentDescription || "Cash payment for stock received",
-          notes: cashPaymentNotes,
+      setProcessingOnlinePayment(true);
+
+      // Wait for Razorpay SDK to load
+      if (!window.Razorpay) {
+        let attempts = 0;
+        while (!window.Razorpay && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        
+        if (!window.Razorpay) {
+          throw new Error('Razorpay SDK not loaded. Please refresh the page and try again.');
+        }
+      }
+
+      if (!token) {
+        throw new Error('Authentication required. Please login again.');
+      }
+
+      // Create Razorpay order
+      const orderResponse = await axios.post(
+        '/api/agent/payment/create-order',
+        { 
+          amount: paymentAmount,
+          description: `Online payment for stock received from admin`
         },
         {
           headers: { Authorization: token },
         }
       );
 
-      toast.success("Cash payment recorded successfully!");
-      setCashPaymentDialogOpen(false);
-      setCashPaymentAmount("");
-      setCashPaymentDescription("");
-      setCashPaymentNotes("");
-      await fetchPaymentHistory();
-    } catch (err) {
-      console.error("Error recording cash payment:", err);
-      toast.error(err?.response?.data?.error || "Failed to record cash payment");
-    } finally {
-      setSubmittingCashPayment(false);
+      const orderResult = orderResponse.data;
+
+      if (!orderResult || !orderResult.orderId) {
+        throw new Error(orderResult?.error || 'Failed to create payment order');
+      }
+
+      if (!orderResult.keyId) {
+        throw new Error('Payment gateway configuration error. Please contact support.');
+      }
+
+      // Initialize Razorpay checkout
+      const options = {
+        key: orderResult.keyId,
+        amount: orderResult.amount,
+        currency: orderResult.currency || 'INR',
+        name: 'GASCo',
+        description: `Payment - ₹${paymentAmount.toLocaleString()}`,
+        order_id: orderResult.orderId,
+        handler: async function (response) {
+          try {
+            // Verify payment
+            await axios.post(
+              '/api/agent/payment/verify',
+              {
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                amount: paymentAmount,
+                totalDue: stockInfo.unpaidStockAmount,
+                description: `Online payment for stock received from admin`,
+              },
+              {
+                headers: { Authorization: token },
+              }
+            );
+
+            toast.success('Online payment completed successfully!');
+            setOnlinePaymentDialogOpen(false);
+            setOnlinePaymentAmount("");
+            // Refresh payment history after a short delay to ensure backend has processed
+            setTimeout(async () => {
+              await fetchPaymentHistory();
+            }, 1000);
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            toast.error(error?.response?.data?.error || 'Payment verification failed');
+          } finally {
+            setProcessingOnlinePayment(false);
+          }
+        },
+        theme: {
+          color: '#2563eb',
+        },
+        modal: {
+          ondismiss: function () {
+            setProcessingOnlinePayment(false);
+            toast.info('Payment cancelled');
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      
+      razorpay.on('payment.failed', function (response) {
+        console.error('Payment failed:', response);
+        const error = response.error || response;
+        const errorMsg = error.description || error.message || 'Payment failed. Please try again.';
+        toast.error(errorMsg);
+        setProcessingOnlinePayment(false);
+      });
+
+      razorpay.on('error', function (error) {
+        console.error('Razorpay error:', error);
+        const errorObj = error.error || error;
+        const errorMsg = errorObj.description || errorObj.message || 'Payment gateway error. Please try again.';
+        toast.error(errorMsg);
+        setProcessingOnlinePayment(false);
+      });
+
+      // Open Razorpay checkout - this will open the payment modal
+      razorpay.open();
+      
+      // Close dialog after Razorpay opens (payment modal is now open)
+      setOnlinePaymentDialogOpen(false);
+      
+    } catch (error) {
+      console.error('Payment initialization error:', error);
+      const errorMessage = error?.response?.data?.error 
+        || error?.message 
+        || 'Failed to initialize payment';
+      toast.error(errorMessage, { duration: 5000 });
+      setProcessingOnlinePayment(false);
     }
   };
+
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -259,20 +385,12 @@ export default function AgentPayments() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <AgentPaymentButton
-                    amount={stockInfo.unpaidStockAmount}
-                    onPaymentSuccess={(data) => {
-                      toast.success('Payment completed successfully!');
-                      fetchPaymentHistory();
-                    }}
-                  />
                   <Button
-                    onClick={() => setCashPaymentDialogOpen(true)}
-                    className="bg-blue-600 hover:bg-blue-700"
-                    variant="outline"
+                    onClick={() => setOnlinePaymentDialogOpen(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Record Cash Payment
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Pay Online
                   </Button>
                 </div>
               </div>
@@ -354,12 +472,32 @@ export default function AgentPayments() {
                             {payment.transactionID && (
                               <p><strong>Transaction ID:</strong> {payment.transactionID}</p>
                             )}
+                            {/* Partial Payment Details */}
+                            {payment.status === "partial" && payment.method === "online" && (
+                              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                                <p className="font-semibold text-yellow-800 text-xs mb-1">Partial Payment</p>
+                                <p className="text-xs">
+                                  <strong>Online Paid:</strong> ₹{(payment.onlinePaid || 0).toLocaleString()}
+                                </p>
+                                <p className="text-xs">
+                                  <strong>Cash Paid:</strong> ₹{(payment.cashPaid || 0).toLocaleString()}
+                                </p>
+                                <p className="text-xs">
+                                  <strong>Remaining Cash:</strong> ₹{(payment.remainingCash || 0).toLocaleString()}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-2xl font-bold text-green-600">
                             ₹{payment.amount?.toLocaleString() || 0}
                           </p>
+                          {payment.status === "partial" && (
+                            <p className="text-sm text-orange-600 mt-1">
+                              Remaining: ₹{(payment.remainingCash || 0).toLocaleString()}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -370,84 +508,80 @@ export default function AgentPayments() {
           </CardContent>
         </Card>
 
-        {/* Cash Payment Dialog */}
-        <Dialog open={cashPaymentDialogOpen} onOpenChange={setCashPaymentDialogOpen}>
+        {/* Online Payment Dialog */}
+        <Dialog open={onlinePaymentDialogOpen} onOpenChange={setOnlinePaymentDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Record Cash Payment</DialogTitle>
+              <DialogTitle>Pay Online via Razorpay</DialogTitle>
               <DialogDescription>
-                Record a cash payment made to admin for stock received
+                Enter the amount you want to pay manually. The payment will be processed securely through Razorpay.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCashPayment} className="space-y-4">
+            <div className="space-y-4">
+              <div className="p-3 bg-gray-50 rounded space-y-1 text-sm">
+                <p><strong>Unpaid Amount:</strong> ₹{stockInfo.unpaidStockAmount.toLocaleString()}</p>
+                <p className="text-gray-600">You can enter any desired amount to pay</p>
+              </div>
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount (₹)</Label>
+                <Label htmlFor="onlineAmount">Payment Amount (₹)</Label>
                 <Input
-                  id="amount"
+                  id="onlineAmount"
                   type="number"
                   step="0.01"
-                  min="0"
-                  max={stockInfo.unpaidStockAmount}
-                  value={cashPaymentAmount}
-                  onChange={(e) => setCashPaymentAmount(e.target.value)}
-                  placeholder={`Max: ₹${stockInfo.unpaidStockAmount.toLocaleString()}`}
+                  min="1"
+                  value={onlinePaymentAmount}
+                  onChange={(e) => setOnlinePaymentAmount(e.target.value)}
+                  placeholder="Enter amount to pay"
                   required
                 />
                 <p className="text-xs text-gray-500">
-                  Unpaid amount: ₹{stockInfo.unpaidStockAmount.toLocaleString()}
+                  Unpaid Amount: ₹{stockInfo.unpaidStockAmount.toLocaleString()} | Enter any amount you want to pay
                 </p>
+                {onlinePaymentAmount && parseFloat(onlinePaymentAmount) > 0 && parseFloat(onlinePaymentAmount) < stockInfo.unpaidStockAmount && (
+                  <p className="text-sm text-blue-600 font-medium">
+                    Remaining amount after payment: ₹{(stockInfo.unpaidStockAmount - parseFloat(onlinePaymentAmount)).toLocaleString()}
+                  </p>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Input
-                  id="description"
-                  type="text"
-                  value={cashPaymentDescription}
-                  onChange={(e) => setCashPaymentDescription(e.target.value)}
-                  placeholder="Cash payment for stock received"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
-                <Input
-                  id="notes"
-                  type="text"
-                  value={cashPaymentNotes}
-                  onChange={(e) => setCashPaymentNotes(e.target.value)}
-                  placeholder="Additional notes"
-                />
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+                <p className="font-semibold mb-1">Note:</p>
+                <p>Online payments are processed securely through Razorpay. You will be redirected to the payment gateway to complete the transaction.</p>
               </div>
               <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    setCashPaymentDialogOpen(false);
-                    setCashPaymentAmount("");
-                    setCashPaymentDescription("");
-                    setCashPaymentNotes("");
+                    setOnlinePaymentDialogOpen(false);
+                    setOnlinePaymentAmount("");
                   }}
-                  disabled={submittingCashPayment}
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={submittingCashPayment} className="bg-blue-600 hover:bg-blue-700">
-                  {submittingCashPayment ? (
+                <Button
+                  type="button"
+                  onClick={handleOnlinePayment}
+                  disabled={processingOnlinePayment}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {processingOnlinePayment ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Recording...
+                      Processing...
                     </>
                   ) : (
                     <>
-                      <DollarSign className="w-4 h-4 mr-2" />
-                      Record Payment
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Pay Now
                     </>
                   )}
                 </Button>
               </DialogFooter>
-            </form>
+            </div>
           </DialogContent>
         </Dialog>
+
+
       </div>
     </div>
   );

@@ -97,7 +97,14 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
             forecasts: []
           };
 
-      setForecasts(forecastData.forecasts || []);
+      // Sort forecasts by date (chronologically - earliest to latest)
+      const sortedForecasts = (forecastData.forecasts || []).sort((a, b) => {
+        const dateA = a.date ? new Date(a.date.split('T')[0]) : new Date(0);
+        const dateB = b.date ? new Date(b.date.split('T')[0]) : new Date(0);
+        return dateA - dateB;
+      });
+      
+      setForecasts(sortedForecasts);
       setStats(statsData.stats || null);
 
       // Show success message if forecast was just generated
@@ -140,7 +147,32 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
   // FUNCTION: Format Date for Display
   // ============================================
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
+    if (!dateString) return "N/A";
+    
+    let date;
+    
+    // Backend sends dates as ISO strings (YYYY-MM-DD)
+    if (typeof dateString === 'string') {
+      // Parse ISO date string (YYYY-MM-DD) properly
+      // Split and create date to avoid timezone issues
+      const parts = dateString.split('T')[0].split('-');
+      if (parts.length === 3) {
+        // Create date in local timezone (not UTC)
+        date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else {
+        // Fallback to standard parsing
+        date = new Date(dateString);
+      }
+    } else {
+      date = new Date(dateString);
+    }
+    
+    // Validate date
+    if (isNaN(date.getTime())) {
+      console.error("Invalid date:", dateString);
+      return "Invalid Date";
+    }
+    
     return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric"
@@ -151,7 +183,25 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
   // FUNCTION: Format Tooltip Date
   // ============================================
   const formatTooltipDate = (dateString) => {
-    const date = new Date(dateString);
+    if (!dateString) return "N/A";
+    
+    let date;
+    if (typeof dateString === 'string') {
+      // Parse ISO date string (YYYY-MM-DD) properly
+      const parts = dateString.split('T')[0].split('-');
+      if (parts.length === 3) {
+        date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else {
+        date = new Date(dateString);
+      }
+    } else {
+      date = new Date(dateString);
+    }
+    
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
+    
     return date.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
@@ -165,10 +215,42 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
   // ============================================
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+      // Get the actual date from the payload data
+      const dataPoint = payload[0]?.payload;
+      const actualDate = dataPoint?.date || label;
+      
+      // Format the actual date properly
+      let formattedDate = "N/A";
+      if (actualDate) {
+        if (typeof actualDate === 'string') {
+          // Parse ISO date string (YYYY-MM-DD)
+          const parts = actualDate.split('T')[0].split('-');
+          if (parts.length === 3) {
+            const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            if (!isNaN(date.getTime())) {
+              formattedDate = date.toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                year: "numeric"
+              });
+            }
+          }
+        } else if (dataPoint?.dateObj) {
+          // Use the date object if available
+          formattedDate = dataPoint.dateObj.toLocaleDateString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            year: "numeric"
+          });
+        }
+      }
+      
       return (
         <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-semibold text-gray-800 mb-3">
-            {formatTooltipDate(label)}
+            {formattedDate}
           </p>
           {payload.map((entry, index) => (
             <div key={index} className="mb-2">
@@ -252,16 +334,57 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
   }
 
   // ============================================
-  // PREPARE CHART DATA (Only next 7 days)
+  // PREPARE CHART DATA (Only next 7 days, sorted by date)
   // ============================================
-  const chartData = forecasts.slice(0, 7).map((forecast) => ({
-    date: forecast.date,
-    dateLabel: formatDate(forecast.date),
-    p50: forecast.p50,
-    p80: forecast.p80,
-    p95: forecast.p95,
-    suggestedStock: forecast.suggestedStock
-  }));
+  // Ensure forecasts are sorted by date before slicing
+  const sortedForecasts = [...forecasts].sort((a, b) => {
+    const dateA = a.date ? new Date(a.date.split('T')[0]) : new Date(0);
+    const dateB = b.date ? new Date(b.date.split('T')[0]) : new Date(0);
+    return dateA - dateB;
+  });
+  
+  const chartData = sortedForecasts.slice(0, 7).map((forecast, index) => {
+    // Parse date properly from ISO string format (YYYY-MM-DD)
+    let date;
+    const dateStr = forecast.date;
+    
+    if (typeof dateStr === 'string') {
+      // Parse ISO date string (YYYY-MM-DD) - split to avoid timezone issues
+      const parts = dateStr.split('T')[0].split('-');
+      if (parts.length === 3) {
+        // Create date in local timezone
+        date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      } else {
+        date = new Date(dateStr);
+      }
+    } else {
+      date = new Date(dateStr);
+    }
+    
+    // If date is still invalid, calculate from today
+    if (isNaN(date.getTime())) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      date = new Date(today);
+      date.setDate(today.getDate() + index + 1);
+    }
+    
+    // Format date label for chart
+    const dateLabel = date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric"
+    });
+    
+    return {
+      date: dateStr,
+      dateLabel: dateLabel,
+      dateObj: date, // Store date object for tooltip
+      p50: forecast.p50 || 0,
+      p80: forecast.p80 || 0,
+      p95: forecast.p95 || 0,
+      suggestedStock: forecast.suggestedStock || 0
+    };
+  });
 
   // ============================================
   // MAIN RENDER
@@ -269,7 +392,7 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
   return (
     <div className="space-y-6">
       {/* ============================================
-          Header Section with Stats
+          Header Section - Simplified
           ============================================ */}
       <Card>
         <CardHeader>
@@ -277,99 +400,56 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
             <div>
               <CardTitle className="text-2xl flex items-center gap-2">
                 <BarChart3 className="w-6 h-6 text-blue-600" />
-                Your Next Week's Demand Prediction
+                Next 7 Days Demand Prediction
               </CardTitle>
               <p className="text-sm text-gray-500 mt-1">
-                AI predicts how many cylinders you'll need each day for the next 7 days
+                See how many cylinders you'll need each day
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleRefresh}
-                variant="outline"
-                size="sm"
-                disabled={refreshing}
-              >
-                <RefreshCw
-                  className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
-                />
-                Refresh
-              </Button>
-            </div>
+            <Button
+              onClick={handleRefresh}
+              variant="outline"
+              size="sm"
+              disabled={refreshing}
+            >
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+              />
+              Refresh
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {/* Statistics Cards */}
+          {/* Simple Stats */}
           {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Average Daily Need</p>
-                      <p className="text-2xl font-bold text-blue-600">
-                        {stats.averageDailyDemand?.toFixed(1) || "0"}
-                      </p>
-                      <p className="text-xs text-gray-500">cylinders/day</p>
-                    </div>
-                    <TrendingUp className="w-8 h-8 text-blue-400" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Highest Day Need</p>
-                      <p className="text-2xl font-bold text-orange-600">
-                        {stats.maxDailyDemand || "0"}
-                      </p>
-                      <p className="text-xs text-gray-500">cylinders</p>
-                    </div>
-                    <TrendingUp className="w-8 h-8 text-orange-400" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Total Week Need</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {stats.totalForecastedDemand?.p50 || "0"}
-                      </p>
-                      <p className="text-xs text-gray-500">cylinders/week</p>
-                    </div>
-                    <Package className="w-8 h-8 text-green-400" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Recommended Stock</p>
-                      <p className="text-2xl font-bold text-purple-600">
-                        {stats.totalSuggestedStock || "0"}
-                      </p>
-                      <p className="text-xs text-gray-500">keep in stock</p>
-                    </div>
-                    <Package className="w-8 h-8 text-purple-400" />
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-sm text-gray-600 mb-1">Average Daily Need</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {Math.round(stats.averageDailyDemand || 0)}
+                </p>
+                <p className="text-xs text-gray-500">cylinders</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <p className="text-sm text-gray-600 mb-1">Total Week Need</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.totalForecastedDemand?.p50 || 0}
+                </p>
+                <p className="text-xs text-gray-500">cylinders</p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <p className="text-sm text-gray-600 mb-1">Recommended Stock</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {stats.totalSuggestedStock || 0}
+                </p>
+                <p className="text-xs text-gray-500">cylinders</p>
+              </div>
             </div>
           )}
 
-          {/* Forecast Chart - Daily Bar Chart */}
+          {/* Forecast Chart - Simplified */}
           <div className="mt-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              📊 Daily Prediction (Next 7 Days)
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              See how many cylinders you'll likely need each day
-            </p>
-            <ResponsiveContainer width="100%" height={400}>
+            <ResponsiveContainer width="100%" height={350}>
               <BarChart 
                 data={chartData}
                 margin={{ top: 5, right: 30, left: 0, bottom: 60 }}
@@ -381,7 +461,7 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
                   textAnchor="end"
                   height={80}
                   stroke="#6b7280"
-                  style={{ fontSize: "11px" }}
+                  style={{ fontSize: "12px" }}
                 />
                 <YAxis stroke="#6b7280" style={{ fontSize: "12px" }} />
                 <Tooltip content={<CustomTooltip />} />
@@ -401,94 +481,87 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
               </BarChart>
             </ResponsiveContainer>
           </div>
-
-          {/* Forecast Legend */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-              💡 What This Means
-            </h4>
-            <div className="space-y-2 text-sm text-gray-700">
-              <div className="flex items-start gap-2">
-                <Badge className="bg-blue-600 text-white mt-0.5">Expected Need</Badge>
-                <span className="flex-1">The most likely number of cylinders you'll need that day. Based on your past booking patterns.</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <Badge className="bg-purple-600 text-white mt-0.5">Recommended Stock</Badge>
-                <span className="flex-1">How many cylinders you should keep in stock to be safe. Includes a small buffer for unexpected demand.</span>
-              </div>
-              <div className="mt-3 p-3 bg-white rounded border border-blue-200">
-                <p className="text-xs text-gray-600">
-                  <strong>💡 Tip:</strong> Keep your stock close to the "Recommended Stock" level to avoid running out while not overstocking.
-                </p>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
       {/* ============================================
-          Forecast Table
+          Forecast Table - Simplified
           ============================================ */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
-            Day-by-Day Breakdown
+            Daily Breakdown
           </CardTitle>
-          <p className="text-sm text-gray-500 mt-1">
-            Detailed prediction for each day of the next week
-          </p>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="p-3 text-left font-semibold">Day</th>
+                  <th className="p-3 text-left font-semibold">Date</th>
                   <th className="p-3 text-right font-semibold">Expected Need</th>
-                  <th className="p-3 text-right font-semibold">Keep Stock</th>
+                  <th className="p-3 text-right font-semibold">Recommended Stock</th>
                 </tr>
               </thead>
               <tbody>
-                {forecasts.slice(0, 7).map((forecast, index) => (
-                  <tr
-                    key={index}
-                    className="border-t hover:bg-blue-50 transition-colors"
-                  >
-                    <td className="p-3 font-medium">
-                      <div className="flex flex-col">
-                        <span className="font-semibold">
-                          {new Date(forecast.date).toLocaleDateString("en-US", {
-                            weekday: "short",
-                          })}
+                {sortedForecasts.slice(0, 7).map((forecast, index) => {
+                  // Parse date properly from ISO string format (YYYY-MM-DD)
+                  const dateStr = forecast.date;
+                  let date;
+                  
+                  if (typeof dateStr === 'string') {
+                    // Parse ISO date string (YYYY-MM-DD) - split to avoid timezone issues
+                    const parts = dateStr.split('T')[0].split('-');
+                    if (parts.length === 3) {
+                      // Create date in local timezone using year, month, day
+                      date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    } else {
+                      date = new Date(dateStr);
+                    }
+                  } else {
+                    date = new Date(dateStr);
+                  }
+                  
+                  // Validate date - if invalid, log error but don't calculate from today
+                  // Use the actual date from forecast data
+                  if (isNaN(date.getTime())) {
+                    console.error("Invalid date in forecast:", dateStr, "at index:", index);
+                    // Only fallback to today if date is completely invalid
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    date = new Date(today);
+                    date.setDate(today.getDate() + index + 1);
+                  }
+                  
+                  return (
+                    <tr
+                      key={index}
+                      className="border-t hover:bg-blue-50 transition-colors"
+                    >
+                      <td className="p-3 font-medium">
+                        {date.toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric"
+                        })}
+                      </td>
+                      <td className="p-3 text-right">
+                        <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded font-semibold">
+                          {forecast.p50 || 0}
                         </span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(forecast.date).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="p-3 text-right">
-                      <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded font-semibold">
-                        {forecast.p50} cylinders
-                      </span>
-                    </td>
-                    <td className="p-3 text-right">
-                      <Badge className="bg-purple-600 text-white px-3 py-1 text-sm font-semibold">
-                        {forecast.suggestedStock} cylinders
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-3 text-right">
+                        <Badge className="bg-purple-600 text-white px-3 py-1 text-sm font-semibold">
+                          {forecast.suggestedStock || 0}
+                        </Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
-          </div>
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-600">
-              <strong>📌 Remember:</strong> These are predictions based on your past booking patterns. Actual demand may vary slightly.
-            </p>
           </div>
         </CardContent>
       </Card>

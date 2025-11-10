@@ -17,6 +17,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Search, RefreshCcw } from "lucide-react";
 
@@ -165,9 +172,35 @@ export default function ManageCylinders() {
               <RefreshCcw size={16} /> Refresh
             </Button>
 
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog
+              open={open}
+              onOpenChange={(isOpen) => {
+                setOpen(isOpen);
+                if (!isOpen) {
+                  setEditing(null);
+                  setFormData({
+                    cylinderName: "",
+                    cylinderType: "",
+                    weight: "",
+                    price: "",
+                  });
+                }
+              }}
+            >
               <DialogTrigger asChild>
-                <Button onClick={() => setEditing(null)}>Add Cylinder</Button>
+                <Button
+                  onClick={() => {
+                    setEditing(null);
+                    setFormData({
+                      cylinderName: "",
+                      cylinderType: "",
+                      weight: "",
+                      price: "",
+                    });
+                  }}
+                >
+                  Add Cylinder
+                </Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
@@ -177,20 +210,37 @@ export default function ManageCylinders() {
                 <div className="space-y-3 mt-3">
                   <div>
                     <Label>Cylinder Name</Label>
-                    <Input
-                      name="cylinderName"
+                    <Select
                       value={formData.cylinderName}
-                      onChange={handleChange}
-                    />
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, cylinderName: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Cylinder Name" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Bharath">Bharath</SelectItem>
+                        <SelectItem value="HP">HP</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label>Type</Label>
-                    <Input
-                      name="cylinderType"
+                    <Select
                       value={formData.cylinderType}
-                      onChange={handleChange}
-                      placeholder="e.g. domestic / commercial"
-                    />
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, cylinderType: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Cylinder Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="commercial">Commercial</SelectItem>
+                        <SelectItem value="private Commercial">Private Commercial</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label>Weight (kg)</Label>

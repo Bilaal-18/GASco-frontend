@@ -17,11 +17,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { RefreshCcw } from "lucide-react";
 
 export default function ManageStocks() {
   const [stocks, setStocks] = useState([]);
+  const [cylinders, setCylinders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -47,8 +55,22 @@ export default function ManageStocks() {
     }
   };
 
+  // 🔹 Fetch all cylinders
+  const fetchCylinders = async () => {
+    try {
+      const res = await axios.get("/api/list", {
+        headers: { Authorization: token },
+      });
+      setCylinders(res.data || []);
+    } catch (err) {
+      console.error("Error fetching cylinders:", err);
+      toast.error("Failed to fetch cylinders");
+    }
+  };
+
   useEffect(() => {
     fetchStocks();
+    fetchCylinders();
   }, []);
 
   // 🔹 Handle input change
@@ -124,15 +146,34 @@ export default function ManageStocks() {
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={fetchStocks}
+              onClick={() => {
+                fetchStocks();
+                fetchCylinders();
+              }}
               className="flex items-center gap-2"
             >
               <RefreshCcw size={16} /> Refresh
             </Button>
 
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog
+              open={open}
+              onOpenChange={(isOpen) => {
+                setOpen(isOpen);
+                if (!isOpen) {
+                  setEditing(null);
+                  setFormData({ cylinderId: "", totalQuantity: "" });
+                }
+              }}
+            >
               <DialogTrigger asChild>
-                <Button onClick={() => setEditing(null)}>Add Stock</Button>
+                <Button
+                  onClick={() => {
+                    setEditing(null);
+                    setFormData({ cylinderId: "", totalQuantity: "" });
+                  }}
+                >
+                  Add Stock
+                </Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
@@ -141,13 +182,28 @@ export default function ManageStocks() {
 
                 <div className="space-y-3 mt-3">
                   <div>
-                    <Label>Cylinder ID</Label>
-                    <Input
-                      name="cylinderId"
-                      value={formData.cylinderId}
-                      onChange={handleChange}
-                      placeholder="Enter Cylinder ID"
-                    />
+                    <Label>Select Cylinder</Label>
+                    {cylinders.length === 0 ? (
+                      <p className="text-sm text-gray-500">Loading cylinders...</p>
+                    ) : (
+                      <Select
+                        value={formData.cylinderId}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, cylinderId: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a cylinder" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cylinders.map((cylinder) => (
+                            <SelectItem key={cylinder._id} value={cylinder._id}>
+                              {cylinder.cylinderName} - {cylinder.cylinderType} ({cylinder.weight}kg) - ₹{cylinder.price}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
 
                   <div>

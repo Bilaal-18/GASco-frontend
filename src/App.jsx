@@ -34,7 +34,7 @@ import PaymentDetails from "./pages/customer/PaymentDetails";
 export default function App() {
   const{user} = useContext(userContext)
   return (
-    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme" attribute="class" enableSystem={false}>
       <Routes>
         
             <Route path="/" element={<Home />} />

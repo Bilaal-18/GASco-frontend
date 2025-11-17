@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Bot, X, Send } from "lucide-react";
+import { Bot, X } from "lucide-react";
 import { toast } from "sonner";
 import axios from "@/config/config";
 
@@ -70,7 +70,7 @@ const CustomerChatbot = ({ bookings = [], summary = {} }) => {
   const [messages, setMessages] = useState([
     {
       role: "bot",
-      content: "Hello! I'm your multilingual booking assistant. I can help you with booking status, payment details, and delivery information. You can ask in English or Manglish (Malayalam written in English letters). If you type in Manglish, I'll respond in Manglish. If you type in English, I'll respond in English.",
+      content: "Hello! I can help you with booking status, payment details, and delivery information. You can ask in English or Manglish.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -252,22 +252,7 @@ const CustomerChatbot = ({ bookings = [], summary = {} }) => {
   const formatMessage = (content) => {
     const lines = content.split("\n");
     return lines.map((line, idx) => {
-      if (line.trim().startsWith("**") && line.trim().endsWith("**")) {
-        return (
-          <strong key={idx} className="font-bold text-blue-600">
-            {line.replace(/\*\*/g, "")}
-          </strong>
-        );
-      }
       if (line.trim().startsWith("•")) {
-        return (
-          <div key={idx} className="ml-2 flex items-start">
-            <span className="mr-2">•</span>
-            <span>{line.replace("•", "").trim()}</span>
-          </div>
-        );
-      }
-      if (line.trim().match(/^\d+\./)) {
         return (
           <div key={idx} className="ml-2">
             {line}
@@ -280,25 +265,19 @@ const CustomerChatbot = ({ bookings = [], summary = {} }) => {
 
   return (
     <>
-      {/* Floating Button */}
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
           className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white z-50 flex items-center justify-center"
-          title="Open Chat Assistant"
         >
           <Bot className="w-6 h-6" />
         </Button>
       )}
 
-      {/* Chat Window */}
       {isOpen && (
         <Card className="fixed bottom-6 right-6 w-96 h-[600px] shadow-2xl z-50 flex flex-col">
-          <CardHeader className="bg-blue-600 text-white flex flex-row items-center justify-between pb-3">
-            <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5" />
-              <CardTitle className="text-lg">Booking Assistant</CardTitle>
-            </div>
+          <div className="bg-blue-600 text-white flex items-center justify-between p-3">
+            <div className="font-semibold">Chat Assistant</div>
             <Button
               variant="ghost"
               size="sm"
@@ -307,14 +286,12 @@ const CustomerChatbot = ({ bookings = [], summary = {} }) => {
             >
               <X className="w-4 h-4" />
             </Button>
-          </CardHeader>
+          </div>
 
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-            {/* Messages */}
             <div 
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
-              style={{ maxHeight: '100%' }}
             >
               {messages.map((msg, idx) => (
                 <div
@@ -327,16 +304,12 @@ const CustomerChatbot = ({ bookings = [], summary = {} }) => {
                     className={`max-w-[80%] rounded-lg p-3 ${
                       msg.role === "user"
                         ? "bg-blue-600 text-white"
-                        : "bg-white border border-gray-200 text-gray-800"
+                        : "bg-white border border-gray-200"
                     }`}
                   >
-                    {msg.role === "bot" ? (
-                      <div className="text-sm whitespace-pre-line">
-                        {formatMessage(msg.content)}
-                      </div>
-                    ) : (
-                      <div className="text-sm">{msg.content}</div>
-                    )}
+                    <div className="text-sm whitespace-pre-line">
+                      {msg.role === "bot" ? formatMessage(msg.content) : msg.content}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -361,7 +334,6 @@ const CustomerChatbot = ({ bookings = [], summary = {} }) => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
             <div className="border-t p-3 bg-white">
               <div className="flex gap-2">
                 <Input
@@ -371,14 +343,12 @@ const CustomerChatbot = ({ bookings = [], summary = {} }) => {
                   onKeyDown={handleKeyDown}
                   placeholder={isTyping ? "Typing..." : "Ask about your bookings..."}
                   className="flex-1"
-                  autoFocus
                 />
                 <Button
                   onClick={handleSend}
                   disabled={!input.trim() || isTyping}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Send className="w-4 h-4" />
+                  Send
                 </Button>
               </div>
             </div>

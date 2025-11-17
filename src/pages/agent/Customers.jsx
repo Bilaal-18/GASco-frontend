@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import axios from "@/config/config";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Search, MapPin, Eye, Plus, Edit, Trash2 } from "lucide-react";
 import AgentSidebar from "@/components/layout/AgentSidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -16,17 +16,6 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogTrigger,
-  AlertDialogCancel,
-  AlertDialogDescription,
-  AlertDialogTitle,
-  AlertDialogHeader,
-  AlertDialogFooter,
-} from "@/components/ui/alert-dialog";
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -34,6 +23,8 @@ export default function Customers() {
   const [loading, setLoading] = useState(true);
   const [agentId, setAgentId] = useState(null);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,7 +44,7 @@ export default function Customers() {
   });
   const token = localStorage.getItem("token");
 
-  // Fetch agent data first to get agent ID
+
   useEffect(() => {
     const fetchAgentId = async () => {
       try {
@@ -95,7 +86,6 @@ export default function Customers() {
     fetchCustomers();
   }, [agentId, token]);
 
-  // Search filter
   useEffect(() => {
     const filtered = customers.filter((c) =>
       c.username?.toLowerCase().includes(search.toLowerCase()) ||
@@ -103,7 +93,13 @@ export default function Customers() {
       c.phoneNo?.includes(search)
     );
     setFilteredCustomers(filtered);
+    setCurrentPage(1);
   }, [search, customers]);
+
+  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentCustomers = filteredCustomers.slice(startIndex, endIndex);
 
   const handleViewDetails = (customer) => {
     setSelectedCustomer(customer);
@@ -163,7 +159,6 @@ export default function Customers() {
   const handleDeleteCustomer = async (customerId) => {
     try {
       setLoading(true);
-      // First get the agent's account info to get their ID
       const accountRes = await axios.get("/api/account", {
         headers: { Authorization: token },
       });
@@ -255,61 +250,40 @@ export default function Customers() {
 
   if (loading || !agentId) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <AgentSidebar />
-        <div className="flex-1 flex justify-center items-center ml-64">
-          <div className="text-gray-500">Loading customers...</div>
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="flex justify-center items-center min-h-screen">
+            <div className="text-gray-500">Loading customers...</div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <SidebarProvider>
       <AgentSidebar />
-      <div className="flex-1 ml-64 p-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-semibold text-gray-800 flex items-center gap-2">
-            <Users className="w-6 h-6 text-blue-600" />
-            My Customers
-          </h1>
-          <Button onClick={handleAddCustomer} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Add Customer
-          </Button>
+      <SidebarInset>
+        <div className="p-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold mb-4">My Customers</h1>
+          <div className="flex gap-2 mb-4">
+            <Input
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={handleAddCustomer}>Add Customer</Button>
+          </div>
         </div>
 
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <Input
-                placeholder="Search by name, email, or phone number..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {filteredCustomers.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-12">
-                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">
-                  {search ? "No customers found matching your search." : "No customers assigned to you yet."}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="text-center py-8">No customers found</div>
         ) : (
           <Card>
-            <CardHeader>
-              <CardTitle>Customer List ({filteredCustomers.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -318,40 +292,27 @@ export default function Customers() {
                       <TableHead>Email</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Address</TableHead>
-                      <TableHead className="text-center">Actions</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredCustomers.map((customer) => (
+                    {currentCustomers.map((customer) => (
                       <TableRow key={customer._id}>
-                        <TableCell className="font-medium">
-                          {customer.username || "Unnamed Customer"}
-                        </TableCell>
+                        <TableCell>{customer.username || "N/A"}</TableCell>
                         <TableCell>{customer.email || "N/A"}</TableCell>
                         <TableCell>{customer.phoneNo || "N/A"}</TableCell>
                         <TableCell>
-                          {customer.address ? (
-                            <div className="text-sm">
-                              {customer.address.street && <span>{customer.address.street}, </span>}
-                              {customer.address.city && <span>{customer.address.city}, </span>}
-                              {customer.address.state && <span>{customer.address.state}</span>}
-                              {customer.address.pincode && <span> - {customer.address.pincode}</span>}
-                              {!customer.address.street && !customer.address.city && !customer.address.state && !customer.address.pincode && (
-                                <span className="text-gray-400">No address</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">No address</span>
-                          )}
+                          {customer.address
+                            ? `${customer.address.street || ""} ${customer.address.city || ""} ${customer.address.state || ""} ${customer.address.pincode || ""}`.trim() || "N/A"
+                            : "N/A"}
                         </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2">
+                        <TableCell>
+                          <div className="flex gap-2">
                             <Button
                               onClick={() => handleViewDetails(customer)}
                               variant="outline"
                               size="sm"
                             >
-                              <Eye className="w-4 h-4 mr-1" />
                               View
                             </Button>
                             <Button
@@ -359,34 +320,19 @@ export default function Customers() {
                               variant="outline"
                               size="sm"
                             >
-                              <Edit className="w-4 h-4 mr-1" />
                               Edit
                             </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="sm" variant="destructive">
-                                  <Trash2 className="w-4 h-4 mr-1" />
-                                  Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the customer.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteCustomer(customer._id)}
-                                    className="bg-red-600 hover:bg-red-700 text-white"
-                                  >
-                                    Continue
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <Button
+                              onClick={() => {
+                                if (confirm("Delete this customer?")) {
+                                  handleDeleteCustomer(customer._id);
+                                }
+                              }}
+                              variant="outline"
+                              size="sm"
+                            >
+                              Delete
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -394,41 +340,52 @@ export default function Customers() {
                   </TableBody>
                 </Table>
               </div>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredCustomers.length)} of {filteredCustomers.length}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Customer Details</DialogTitle>
             </DialogHeader>
             {selectedCustomer && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Name</p>
-                    <p className="text-base font-semibold">{selectedCustomer.username || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Email</p>
-                    <p className="text-base">{selectedCustomer.email || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Phone Number</p>
-                    <p className="text-base">{selectedCustomer.phoneNo || "N/A"}</p>
-                  </div>
-                </div>
+              <div className="space-y-2">
+                <div>Name: {selectedCustomer.username || "N/A"}</div>
+                <div>Email: {selectedCustomer.email || "N/A"}</div>
+                <div>Phone: {selectedCustomer.phoneNo || "N/A"}</div>
                 {selectedCustomer.address && (
-                  <div className="border-t pt-4">
-                    <p className="text-sm font-medium text-gray-500 mb-2">Address</p>
-                    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                      <p><strong>Street:</strong> {selectedCustomer.address.street || "N/A"}</p>
-                      <p><strong>City:</strong> {selectedCustomer.address.city || "N/A"}</p>
-                      <p><strong>State:</strong> {selectedCustomer.address.state || "N/A"}</p>
-                      <p><strong>Pincode:</strong> {selectedCustomer.address.pincode || "N/A"}</p>
-                    </div>
-                  </div>
+                  <>
+                    <div>Street: {selectedCustomer.address.street || "N/A"}</div>
+                    <div>City: {selectedCustomer.address.city || "N/A"}</div>
+                    <div>State: {selectedCustomer.address.state || "N/A"}</div>
+                    <div>Pincode: {selectedCustomer.address.pincode || "N/A"}</div>
+                  </>
                 )}
               </div>
             )}
@@ -453,101 +410,88 @@ export default function Customers() {
             });
           }
         }}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingCustomer ? "Edit Customer" : "Add New Customer"}</DialogTitle>
+              <DialogTitle>{editingCustomer ? "Edit Customer" : "Add Customer"}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 mt-4">
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="username">Username *</Label>
+                <Label>Name</Label>
                 <Input
-                  id="username"
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
-                  placeholder="Enter username"
+                  placeholder="Name"
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email *</Label>
+                <Label>Email</Label>
                 <Input
-                  id="email"
                   name="email"
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="Enter email address"
+                  placeholder="Email"
                 />
               </div>
               <div>
-                <Label htmlFor="phoneNo">Phone Number *</Label>
+                <Label>Phone</Label>
                 <Input
-                  id="phoneNo"
                   name="phoneNo"
                   value={formData.phoneNo}
                   onChange={handleInputChange}
-                  placeholder="Enter 10-digit phone number"
+                  placeholder="Phone"
                   maxLength={10}
                 />
               </div>
               <div>
-                <Label htmlFor="password">{editingCustomer ? "Password (leave blank to keep current)" : "Password *"}</Label>
+                <Label>Password</Label>
                 <Input
-                  id="password"
                   name="password"
                   type="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  placeholder={editingCustomer ? "Enter new password (leave blank to keep current)" : "Enter password (min 8 characters)"}
+                  placeholder="Password"
                 />
               </div>
-              <div className="border-t pt-4">
-                <Label className="text-base font-semibold mb-3 block">Address</Label>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="street">Street</Label>
-                    <Input
-                      id="street"
-                      name="address.street"
-                      value={formData.address.street}
-                      onChange={handleInputChange}
-                      placeholder="Enter street address"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        name="address.city"
-                        value={formData.address.city}
-                        onChange={handleInputChange}
-                        placeholder="Enter city"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="state">State</Label>
-                      <Input
-                        id="state"
-                        name="address.state"
-                        value={formData.address.state}
-                        onChange={handleInputChange}
-                        placeholder="Enter state"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="pincode">Pincode</Label>
-                    <Input
-                      id="pincode"
-                      name="address.pincode"
-                      value={formData.address.pincode}
-                      onChange={handleInputChange}
-                      placeholder="Enter 6-digit pincode"
-                      maxLength={6}
-                    />
-                  </div>
+              <div>
+                <Label>Street</Label>
+                <Input
+                  name="address.street"
+                  value={formData.address.street}
+                  onChange={handleInputChange}
+                  placeholder="Street"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>City</Label>
+                  <Input
+                    name="address.city"
+                    value={formData.address.city}
+                    onChange={handleInputChange}
+                    placeholder="City"
+                  />
                 </div>
+                <div>
+                  <Label>State</Label>
+                  <Input
+                    name="address.state"
+                    value={formData.address.state}
+                    onChange={handleInputChange}
+                    placeholder="State"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Pincode</Label>
+                <Input
+                  name="address.pincode"
+                  value={formData.address.pincode}
+                  onChange={handleInputChange}
+                  placeholder="Pincode"
+                  maxLength={6}
+                />
               </div>
             </div>
             <DialogFooter>
@@ -561,15 +505,14 @@ export default function Customers() {
                 Cancel
               </Button>
               <Button onClick={handleSubmitCustomer} disabled={isSubmitting}>
-                {isSubmitting 
-                  ? (editingCustomer ? "Updating..." : "Adding...") 
-                  : (editingCustomer ? "Update Customer" : "Add Customer")}
+                {isSubmitting ? "Saving..." : editingCustomer ? "Update" : "Add"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 

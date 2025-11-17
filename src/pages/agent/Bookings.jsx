@@ -3,6 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   FileText, 
   MapPin, 
   Package, 
@@ -20,7 +28,15 @@ import {
   RotateCcw,
   Plus
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import AgentSidebar from "@/components/layout/AgentSidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import axios from "@/config/config";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -279,6 +295,10 @@ export default function Bookings() {
     handleUpdateBooking(bookingId, { isReturned: !currentStatus });
   };
 
+  const handleReturnedChange = (bookingId, value) => {
+    handleUpdateBooking(bookingId, { isReturned: value === "returned" });
+  };
+
   const handleCreateBooking = async () => {
     if (!bookingFormData.customerId || !bookingFormData.cylinderId || bookingFormData.quantity <= 0) {
       toast.error("Please fill in all required fields");
@@ -346,6 +366,14 @@ export default function Bookings() {
     }
   };
 
+  const getStatusLabel = (status) => {
+    return status ? status.toUpperCase() : "N/A";
+  };
+
+  const getPaymentLabel = (paymentStatus) => {
+    return paymentStatus ? paymentStatus.toUpperCase() : "N/A";
+  };
+
   const getStatusBadge = (status) => {
     const variants = {
       pending: "outline",
@@ -392,6 +420,16 @@ export default function Bookings() {
     });
   };
 
+  const formatDateOnly = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   const formatAddress = (address) => {
     if (!address) return "No address";
     const parts = [];
@@ -404,12 +442,14 @@ export default function Bookings() {
 
   if (loading) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <AgentSidebar />
-        <div className="flex-1 ml-64 flex justify-center items-center">
-          <div className="text-gray-500">Loading bookings...</div>
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="flex justify-center items-center min-h-screen">
+            <div className="text-gray-500">Loading bookings...</div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
@@ -426,9 +466,10 @@ export default function Bookings() {
   const deliveredCount = filteredBookings.filter((b) => b.status === "delivered").length;
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <SidebarProvider>
       <AgentSidebar />
-      <div className="flex-1 ml-64 p-8">
+      <SidebarInset>
+        <div className="p-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-semibold text-gray-800 flex items-center gap-2">
@@ -472,478 +513,227 @@ export default function Bookings() {
           </div>
         </div>
 
-        
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+        <div className="grid grid-cols-5 gap-4 mb-6">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                {selectedDate 
-                  ? selectedDate instanceof Date && selectedDate > new Date()
-                    ? "Scheduled Bookings (Future)"
-                    : "Bookings (Selected Date)"
-                  : "Total Bookings"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-blue-600">{filteredBookings.length}</p>
-              {selectedDate && bookings.length > filteredBookings.length && (
-                <p className="text-xs text-gray-500 mt-1">
-                  of {bookings.length} total
-                </p>
-              )}
-              {selectedDate && selectedDate instanceof Date && selectedDate > new Date() && (
-                <p className="text-xs text-blue-600 mt-1 font-semibold">
-                  Scheduled deliveries
-                </p>
-              )}
+            <CardContent className="p-4">
+              <div className="text-sm">Total Bookings</div>
+              <div className="text-2xl font-bold">{filteredBookings.length}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Delivered</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-green-600">{deliveredCount}</p>
-              {selectedDate && (
-                <p className="text-xs text-gray-500 mt-1">
-                  for selected date
-                </p>
-              )}
+            <CardContent className="p-4">
+              <div className="text-sm">Delivered</div>
+              <div className="text-2xl font-bold">{deliveredCount}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                {selectedDate ? "Revenue (Selected Date)" : "Total Revenue"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-green-600">₹{totalRevenue.toLocaleString()}</p>
-              {selectedDate && (
-                <p className="text-xs text-gray-500 mt-1">
-                  paid bookings
-                </p>
-              )}
+            <CardContent className="p-4">
+              <div className="text-sm">Revenue</div>
+              <div className="text-2xl font-bold">₹{totalRevenue.toLocaleString()}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Pending Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-orange-600">₹{pendingRevenue.toLocaleString()}</p>
-              {selectedDate && (
-                <p className="text-xs text-gray-500 mt-1">
-                  for selected date
-                </p>
-              )}
+            <CardContent className="p-4">
+              <div className="text-sm">Pending Payments</div>
+              <div className="text-2xl font-bold">₹{pendingRevenue.toLocaleString()}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Cylinders Returned</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-purple-600">{returnedCylindersCount}</p>
-              {selectedDate && (
-                <p className="text-xs text-gray-500 mt-1">
-                  for selected date
-                </p>
-              )}
+            <CardContent className="p-4">
+              <div className="text-sm">Returned</div>
+              <div className="text-2xl font-bold">{returnedCylindersCount}</div>
             </CardContent>
           </Card>
         </div>
 
-      
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-                <div className="md:col-span-2 lg:col-span-1">
-                  <CustomDatePicker
-                    label="Filter by Date"
-                    selected={selectedDate}
-                    onChange={(date) => setSelectedDate(date)}
-                    placeholderText="Select date to view bookings"
-                    dateFormat="MMMM d, yyyy"
-                    className="w-full"
-                  />
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedDate(new Date())}
-                      className="text-xs"
-                    >
-                      Today
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const yesterday = new Date();
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        setSelectedDate(yesterday);
-                      }}
-                      className="text-xs"
-                    >
-                      Yesterday
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const tomorrow = new Date();
-                        tomorrow.setDate(tomorrow.getDate() + 1);
-                        setSelectedDate(tomorrow);
-                      }}
-                      className="text-xs bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
-                    >
-                      Tomorrow
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedDate(null)}
-                      className="text-xs"
-                    >
-                      All Dates
-                    </Button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    placeholder="Search bookings..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-gray-400" />
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-gray-400" />
-                  <select
-                    value={paymentFilter}
-                    onChange={(e) => setPaymentFilter(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">All Payments</option>
-                    <option value="paid">Paid</option>
-                    <option value="pending">Pending</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t">
-                <div className="text-sm text-gray-500">
-                  Showing <span className="font-semibold text-gray-700">{filteredBookings.length}</span> of <span className="font-semibold text-gray-700">{bookings.length}</span> bookings
-                  {selectedDate && (
-                    <span className="ml-2 text-blue-600">
-                      for {selectedDate instanceof Date ? selectedDate.toLocaleDateString("en-US", { 
-                        weekday: "long",
-                        year: "numeric", 
-                        month: "long", 
-                        day: "numeric" 
-                      }) : new Date(selectedDate).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-                {selectedDate && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedDate(new Date())}
-                    className="text-xs"
-                  >
-                    <Calendar className="w-3 h-3 mr-1" />
-                    Reset to Today
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mb-6 flex gap-2">
+          <Input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1"
+          />
+          <Select
+            value={statusFilter}
+            onValueChange={setStatusFilter}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={paymentFilter}
+            onValueChange={setPaymentFilter}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="All Payment" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Payment</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+            </SelectContent>
+          </Select>
+          <CustomDatePicker
+            selected={selectedDate}
+            onChange={(date) => setSelectedDate(date)}
+            placeholderText="Date"
+            dateFormat="MMM d, yyyy"
+            className="w-32"
+          />
+          {selectedDate && (
+            <Button variant="outline" size="sm" onClick={() => setSelectedDate(null)}>
+              Clear
+            </Button>
+          )}
+        </div>
 
         {filteredBookings.length === 0 ? (
           <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-12">
-                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">
-                  {selectedDate || search || statusFilter !== "all" || paymentFilter !== "all"
-                    ? "No bookings found matching your filters."
-                    : "No bookings found."}
-                </p>
-                {selectedDate && (
-                  <div className="flex gap-2 mt-4 justify-center">
-                    <Button
-                      variant="outline"
-                      onClick={() => setSelectedDate(new Date())}
-                    >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      View Today's Bookings
-                    </Button>
-                    {selectedDate instanceof Date && selectedDate <= new Date() && (
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          const tomorrow = new Date();
-                          tomorrow.setDate(tomorrow.getDate() + 1);
-                          setSelectedDate(tomorrow);
-                        }}
-                        className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
-                      >
-                        <Calendar className="w-4 h-4 mr-2" />
-                        View Tomorrow's Bookings
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      onClick={() => setSelectedDate(null)}
-                    >
-                      View All Bookings
-                    </Button>
-                  </div>
-                )}
-              </div>
+            <CardContent className="py-12">
+              <div className="text-center text-gray-500 text-lg">Booking not found.</div>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-6">
-            {filteredBookings.map((booking) => {
-              const customerLocation = booking.customer?.location?.coordinates
-                ? [booking.customer.location.coordinates[1], booking.customer.location.coordinates[0]]
-                : null;
+          <Card>
+            <CardContent className="pt-6">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Cylinder</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead>Delivery Date</TableHead>
+                      <TableHead>Directions</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBookings.map((booking) => {
+                      const customerLocation = booking.customer?.location?.coordinates
+                        ? [booking.customer.location.coordinates[1], booking.customer.location.coordinates[0]]
+                        : null;
 
-              return (
-                <Card key={booking._id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2 flex-wrap">
-                          <CardTitle className="text-xl">
-                            {booking.customer?.username || booking.customer?.businessName || "Unknown Customer"}
-                          </CardTitle>
-                          {getStatusBadge(booking.status)}
-                          <Badge variant="outline" className={booking.paymentMethod === "online" ? "bg-purple-50 text-purple-700 border-purple-300" : "bg-gray-50 text-gray-700 border-gray-300"}>
-                            {booking.paymentMethod === "online" ? "Online" : "Cash"}
-                          </Badge>
-                          {getPaymentBadge(booking.paymentStatus)}
-                          {booking.status === "delivered" && booking.paymentStatus === "pending" && booking.paymentMethod === "cash" && (
-                            <Badge className="bg-orange-500 text-white">
-                              Collect Cash
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mt-2 flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>Booked: {formatDate(booking.createdAt)}</span>
-                          </span>
-                          {booking.deliveryDate && (
-                            <span className="flex items-center gap-1">
-                              <Package className="w-4 h-4" />
-                              <span className={new Date(booking.deliveryDate) > new Date() ? "text-blue-600 font-semibold" : ""}>
-                                Delivery: {formatDate(booking.deliveryDate)}
-                                {new Date(booking.deliveryDate) > new Date() && (
-                                  <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-300">
-                                    Upcoming
-                                  </Badge>
-                                )}
-                              </span>
-                            </span>
-                          )}
-                          {booking.isReturned && (
-                            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                              Returned
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                          <User className="w-4 h-4" />
-                          Customer Details
-                        </h3>
-                        <div className="text-sm space-y-1 text-gray-600">
-                          <p className="flex items-center gap-2">
-                            <Phone className="w-4 h-4" />
+                      return (
+                        <TableRow key={booking._id}>
+                          <TableCell>
+                            {booking.customer?.username || booking.customer?.businessName || "Unknown"}
+                          </TableCell>
+                          <TableCell>
                             {booking.customer?.phoneNo || "N/A"}
-                          </p>
-                          <p className="flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
-                            {booking.customer?.email || "N/A"}
-                          </p>
-                          <p className="flex items-start gap-2">
-                            <MapPin className="w-4 h-4 mt-1" />
-                            <span>{formatAddress(booking.customer?.address)}</span>
-                          </p>
-                          {customerLocation && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewMap(booking)}
-                              className="mt-2 w-full"
-                            >
-                              <Navigation className="w-4 h-4 mr-2" />
-                              View on Map
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                    
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                          <Package className="w-4 h-4" />
-                          Cylinder Details
-                        </h3>
-                        <div className="text-sm space-y-1 text-gray-600">
-                          <p><strong>Type:</strong> {booking.cylinder?.cylinderType || "N/A"}</p>
-                          <p><strong>Weight:</strong> {booking.cylinder?.weight ? `${booking.cylinder.weight} kg` : "N/A"}</p>
-                          <p><strong>Quantity:</strong> {booking.quantity || 0}</p>
-                          <p><strong>Price per unit:</strong> ₹{booking.cylinder?.price ? booking.cylinder.price.toLocaleString() : 0}</p>
-                          {booking.deliveryDate && (
-                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
-                              <p className="text-blue-800">
-                                <strong>📅 Scheduled Delivery:</strong> {new Date(booking.deliveryDate).toLocaleDateString("en-US", {
-                                  weekday: "long",
-                                  year: "numeric",
-                                  month: "long",
-                                  day: "numeric"
-                                })}
-                                {new Date(booking.deliveryDate) > new Date() && (
-                                  <span className="ml-2 text-blue-600 font-semibold">(Upcoming)</span>
-                                )}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                          <DollarSign className="w-4 h-4" />
-                          Financial Details & Actions
-                        </h3>
-                        <div className="text-sm space-y-1">
-                          <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                            <span className="text-gray-600">Total Amount:</span>
-                            <span className="font-bold text-lg text-blue-600">
-                              ₹{calculateTotalAmount(booking).toLocaleString()}
-                            </span>
-                          </div>
-                          
-                        
-                          <div className="flex justify-between items-center p-2 border rounded">
-                            <span className="text-gray-600">Payment Method:</span>
-                            <Badge variant="outline" className={booking.paymentMethod === "online" ? "bg-purple-50 text-purple-700 border-purple-300" : "bg-gray-50 text-gray-700 border-gray-300"}>
-                              {booking.paymentMethod === "online" ? "Online" : "Cash"}
-                            </Badge>
-                          </div>
-
-                          
-                          <div className="flex justify-between items-center p-2 border rounded">
-                            <span className="text-gray-600">Payment Status:</span>
-                            <div className="flex items-center gap-2">
-                              {getPaymentBadge(booking.paymentStatus)}
-                              {booking.status === "delivered" && booking.paymentStatus === "pending" && booking.paymentMethod === "cash" && (
-                                <span className="text-xs text-orange-600 font-medium">Collect Cash</span>
-                              )}
-                              {booking.status === "delivered" && booking.paymentStatus === "pending" && booking.paymentMethod === "online" && (
-                                <span className="text-xs text-blue-600 font-medium">Customer will pay online</span>
-                              )}
-                              <select
-                                value={booking.paymentStatus}
-                                onChange={(e) => handlePaymentStatusChange(booking._id, e.target.value)}
-                                disabled={updatingBooking === booking._id || (booking.status !== "delivered" && booking.paymentStatus === "pending")}
-                                className="px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="paid">Paid</option>
-                              </select>
-                            </div>
-                          </div>
-
-                      
-                          <div className="flex justify-between items-center p-2 border rounded">
-                            <span className="text-gray-600">Delivery Status:</span>
-                            <div className="flex items-center gap-2">
-                              {getStatusBadge(booking.status)}
-                              <select
-                                value={booking.status}
-                                onChange={(e) => handleStatusChange(booking._id, e.target.value)}
-                                disabled={updatingBooking === booking._id}
-                                className="px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="confirmed">Confirmed</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="cancelled">Cancelled</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          
-                          <div className="flex justify-between items-center p-2 border rounded">
-                            <span className="text-gray-600">Cylinder Returned:</span>
-                            <div className="flex items-center gap-2">
-                              {booking.isReturned ? (
-                                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                              ) : (
-                                <XCircle className="w-5 h-5 text-gray-400" />
-                              )}
+                          </TableCell>
+                          <TableCell>
+                            {booking.cylinder?.cylinderType || "N/A"} ({booking.cylinder?.weight || "N/A"} kg)
+                          </TableCell>
+                          <TableCell>
+                            {booking.quantity || 0}
+                          </TableCell>
+                          <TableCell>
+                            ₹{calculateTotalAmount(booking).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            {booking.status || "N/A"}
+                            {booking.isReturned && " (Returned)"}
+                          </TableCell>
+                          <TableCell>
+                            {booking.paymentStatus || "N/A"} ({booking.paymentMethod === "online" ? "Online" : "Cash"})
+                          </TableCell>
+                          <TableCell>
+                            {booking.deliveryDate ? formatDateOnly(booking.deliveryDate) : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {customerLocation ? (
                               <Button
+                                variant="outline"
                                 size="sm"
-                                variant={booking.isReturned ? "outline" : "default"}
-                                onClick={() => handleReturnedToggle(booking._id, booking.isReturned)}
-                                disabled={updatingBooking === booking._id}
-                                className="h-7 text-xs"
+                                onClick={() => handleViewMap(booking)}
                               >
-                                {updatingBooking === booking._id ? (
-                                  "Updating..."
-                                ) : booking.isReturned ? (
-                                  <>
-                                    <RotateCcw className="w-3 h-3 mr-1" />
-                                    Mark Unreturned
-                                  </>
-                                ) : (
-                                  <>
-                                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                                    Mark Returned
-                                  </>
-                                )}
+                                <Navigation className="w-4 h-4 mr-1" />
+                                Map
                               </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                            ) : (
+                              "N/A"
+                            )}
+                          </TableCell>
+                          <TableCell className="space-y-2 min-w-[220px]">
+                            {/* Payment status */}
+                            <Select
+                              value={booking.paymentStatus || "pending"}
+                              onValueChange={(value) =>
+                                handlePaymentStatusChange(booking._id, value)
+                              }
+                              disabled={updatingBooking === booking._id}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="Payment status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="paid"> Paid</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            {/* Delivery status */}
+                            <Select
+                              value={booking.status || "pending"}
+                              onValueChange={(value) =>
+                                handleStatusChange(booking._id, value)
+                              }
+                              disabled={updatingBooking === booking._id}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="Delivery status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="confirmed">Confirmed</SelectItem>
+                                <SelectItem value="delivered">Delivered</SelectItem>
+                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            {/* Return cylinder */}
+                            <Select
+                              value={booking.isReturned ? "returned" : "not_returned"}
+                              onValueChange={(value) =>
+                                handleReturnedChange(booking._id, value)
+                              }
+                              disabled={updatingBooking === booking._id}
+                            >
+                              <SelectTrigger className="w-[160px]">
+                                <SelectValue placeholder="Return cylinder" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="not_returned">
+                                  Not Returned
+                                </SelectItem>
+                                <SelectItem value="returned">
+                                  Returned
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         
@@ -1183,8 +973,9 @@ export default function Bookings() {
             )}
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 

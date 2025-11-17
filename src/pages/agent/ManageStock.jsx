@@ -1,14 +1,22 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Package, Edit3, Trash2, Clock, CheckCircle, XCircle } from "lucide-react";
 import AgentSidebar from "@/components/layout/AgentSidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import axios from "@/config/config";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function ManageStock() {
   const [stocks, setStocks] = useState([]);
@@ -155,7 +163,7 @@ export default function ManageStock() {
 
 
   const handleDelete = async (stock) => {
-    if (!confirm("Are you sure you want to delete this stock?")) return;
+    if (!confirm("Are you sure you want to return this stock?")) return;
     if (!agentId) {
       toast.error("Agent ID not found");
       return;
@@ -165,14 +173,14 @@ export default function ManageStock() {
       await axios.delete(`/api/DeleteStock/${agentId}/${cylinderId}`, { 
         headers: { Authorization: token } 
       });
-      toast.success("Stock deleted successfully");
+      toast.success("Stock returned successfully");
       const res = await axios.get(`/api/ownStock/${agentId}`, { 
         headers: { Authorization: token } 
       });
       setStocks(res.data.Ownstock || []);
     } catch (err) {
-      console.error("Error deleting stock:", err);
-      const errorMessage = err.response?.data?.error || "Failed to delete stock";
+      console.error("Error returning stock:", err);
+      const errorMessage = err.response?.data?.error || "Failed to return stock";
       toast.error(errorMessage);
     }
   };
@@ -182,129 +190,113 @@ export default function ManageStock() {
   }
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <SidebarProvider>
       <AgentSidebar />
-      <div className="flex-1 ml-64 p-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-semibold text-gray-800 flex items-center gap-2">
-            <Package className="w-6 h-6 text-blue-600" />
-            Manage Stock
-          </h1>
-          <div className="flex gap-3">
-            <Button 
-              onClick={() => setShowRequests(!showRequests)} 
-              variant="outline"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50"
-            >
+      <SidebarInset>
+        <div className="p-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold mb-4">My Stock</h1>
+          <div className="flex gap-2">
+            <Button onClick={() => setShowRequests(!showRequests)} variant="outline">
               {showRequests ? "Hide Requests" : "View Requests"}
             </Button>
-            <Button onClick={() => setOpenDialog(true)} className="bg-blue-600 hover:bg-blue-700">
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Request Gas
-            </Button>
+            <Button onClick={() => setOpenDialog(true)}>Request Gas</Button>
           </div>
         </div>
 
-      
         {showRequests && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">My Gas Requests</h2>
-            {requests.length === 0 ? (
-              <p className="text-gray-500">No gas requests found.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                {requests.map((request) => {
-                  const statusIcons = {
-                    pending: <Clock className="w-4 h-4 text-yellow-600" />,
-                    approved: <CheckCircle className="w-4 h-4 text-green-600" />,
-                    rejected: <XCircle className="w-4 h-4 text-red-600" />
-                  };
-                  const statusColors = {
-                    pending: "bg-yellow-50 border-yellow-200",
-                    approved: "bg-green-50 border-green-200",
-                    rejected: "bg-red-50 border-red-200"
-                  };
-                  
-                  return (
-                    <Card key={request._id} className={`${statusColors[request.status]} shadow-md`}>
-                      <CardHeader>
-                        <CardTitle className="text-gray-700 flex justify-between items-center">
-                          {request.cylinderId?.cylinderType || "Cylinder"}
-                          {statusIcons[request.status]}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-gray-600">Weight: {request.cylinderId?.weight} kg</p>
-                        <p className="text-gray-600">Price: ₹{request.cylinderId?.price}</p>
-                        <p className="text-lg font-semibold mt-2">
-                          Quantity: <span className="text-blue-600">{request.quantity}</span>
-                        </p>
-                        <p className="text-sm mt-2">
-                          Status: <span className={`font-semibold ${
-                            request.status === "pending" ? "text-yellow-600" :
-                            request.status === "approved" ? "text-green-600" :
-                            "text-red-600"
-                          }`}>{request.status.toUpperCase()}</span>
-                        </p>
-                        {request.remarks && (
-                          <p className="text-sm text-gray-500 mt-2">Remarks: {request.remarks}</p>
-                        )}
-                        <p className="text-xs text-gray-400 mt-2">
-                          Requested: {new Date(request.requestedAt).toLocaleDateString()}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="text-sm mb-4">My Gas Requests</div>
+              {requests.length === 0 ? (
+                <div className="text-center py-4">No requests found</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Cylinder</TableHead>
+                        <TableHead>Weight</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Admin Response</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {requests.map((request) => (
+                        <TableRow key={request._id}>
+                          <TableCell>{request.cylinderId?.cylinderType || "N/A"}</TableCell>
+                          <TableCell>{request.cylinderId?.weight || "N/A"} kg</TableCell>
+                          <TableCell>₹{request.cylinderId?.price || "N/A"}</TableCell>
+                          <TableCell>{request.quantity || 0}</TableCell>
+                          <TableCell>{request.status || "N/A"}</TableCell>
+                          <TableCell>{new Date(request.requestedAt).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            {request.status === "rejected" && request.remarks
+                              ? request.remarks
+                              : request.status === "approved"
+                              ? "Approved"
+                              : "N/A"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
-        
         {stocks.length === 0 ? (
-          <p className="text-gray-500 text-center">No stock available. Add new stock to begin.</p>
+          <div className="text-center py-4">No stock available</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {stocks.map((stock) => (
-              <Card key={stock._id} className="shadow-md hover:shadow-lg transition">
-                <CardHeader>
-                  <CardTitle className="text-gray-700 flex justify-between items-center">
-                    {stock.cylinderId?.cylinderType || "Cylinder"}
-                    <div className="flex gap-2">
-                      <Button size="icon" variant="ghost" className="text-blue-600 hover:bg-blue-50">
-                        <Edit3 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-red-600 hover:bg-red-50"
-                        onClick={() => handleDelete(stock)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Weight: {stock.cylinderId?.weight} kg</p>
-                  <p className="text-gray-600">Price: ₹{stock.cylinderId?.price}</p>
-                  <p className="text-lg font-semibold mt-2">
-                    Quantity: <span className="text-blue-600">{stock.quantity}</span>
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <CardContent className="p-4">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cylinder</TableHead>
+                      <TableHead>Weight</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stocks.map((stock) => (
+                      <TableRow key={stock._id}>
+                        <TableCell>{stock.cylinderId?.cylinderType || "N/A"}</TableCell>
+                        <TableCell>{stock.cylinderId?.weight || "N/A"} kg</TableCell>
+                        <TableCell>₹{stock.cylinderId?.price || "N/A"}</TableCell>
+                        <TableCell>{stock.quantity || 0}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(stock)}
+                          >
+                            Return Stock
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Request Gas Dialog */}
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Request Gas from Admin</DialogTitle>
+              <DialogTitle>Request Gas</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 mt-2">
+            <div className="space-y-4">
               <div>
                 <Label>Cylinder Type</Label>
                 <Select
@@ -312,7 +304,7 @@ export default function ManageStock() {
                   value={newStock.cylinderId}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Cylinder Type" />
+                    <SelectValue placeholder="Select Cylinder" />
                   </SelectTrigger>
                   <SelectContent>
                     {cylinders.map((cylinder) => (
@@ -330,15 +322,15 @@ export default function ManageStock() {
                   min="1"
                   value={newStock.quantity}
                   onChange={(e) => setNewStock({ ...newStock, quantity: e.target.value })}
-                  placeholder="Enter Quantity"
+                  placeholder="Quantity"
                 />
               </div>
               <div>
-                <Label>Remarks (Optional)</Label>
+                <Label>Remarks</Label>
                 <Input
                   value={newStock.remarks}
                   onChange={(e) => setNewStock({ ...newStock, remarks: e.target.value })}
-                  placeholder="Any additional notes for admin"
+                  placeholder="Remarks"
                 />
               </div>
             </div>
@@ -346,13 +338,12 @@ export default function ManageStock() {
               <Button variant="outline" onClick={() => setOpenDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleRequestGas} className="bg-blue-600 hover:bg-blue-700">
-                Submit Request
-              </Button>
+              <Button onClick={handleRequestGas}>Submit</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

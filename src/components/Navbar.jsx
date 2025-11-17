@@ -1,11 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import {useTheme} from "next-themes";
-import { Sun,Moon } from "lucide-react";
+import { Moon } from "lucide-react";
 
 export default function Navbar() {
-    const {theme,setTheme} = useTheme();
   return (
 
     <nav className="flex items-center justify-between px-6 py-4 bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
@@ -30,10 +28,9 @@ export default function Navbar() {
           </Button>
         </Link>
 
-        <Button variant = "outline" size = "icon" onClick={()=> setTheme(theme === "light" ? "dark" : "light")}
-            className="rounded-full">
-                {theme === "light" ? <Moon size={18}/> : <Sun size={18}/>}
-            </Button>
+        <Button variant="outline" size="icon" className="rounded-full">
+          <Moon size={18} />
+        </Button>
       </div>
     </nav>
   );

@@ -3,20 +3,20 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchAvailableCylinders } from "@/store/slices/customer/availableCylindersSlice";
 import { bookCylinder } from "@/store/slices/customer/customerDashboardSlice";
 import CustomerSidebar from "@/components/layout/CustomerSidebar";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CylinderIcon, Package, Loader2, AlertCircle, ShoppingCart, Calendar } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import CustomDatePicker from "@/components/ui/DatePicker";
 
@@ -83,161 +83,143 @@ export default function AvailableCylinders() {
 
   if (loading) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <CustomerSidebar />
-        <div className="flex-1 ml-64 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <SidebarProvider>
       <CustomerSidebar />
-      <div className="flex-1 ml-64 p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-            <CylinderIcon className="w-8 h-8 text-blue-600" />
-            Available Cylinders
-          </h1>
-          <p className="text-gray-600">Browse available gas cylinder types and specifications</p>
+      <SidebarInset>
+        <div className="p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-4">Available Cylinders</h1>
         </div>
 
         {error && (
-          <Card className="mb-6 border-red-200 bg-red-50">
-            <CardContent className="pt-6 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <p className="text-red-600">Error: {error}</p>
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="text-red-600">Error: {error}</div>
             </CardContent>
           </Card>
         )}
 
         {cylinders.length === 0 ? (
           <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-12">
-                <Package className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-500 text-lg">No cylinders available at the moment</p>
-              </div>
+            <CardContent className="p-8">
+              <div className="text-center">No cylinders available</div>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cylinders.map((cylinder) => (
-              <Card key={cylinder._id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-xl">{cylinder.cylinderName || "Gas Cylinder"}</CardTitle>
-                    <CylinderIcon className="w-8 h-8 text-blue-600" />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Type</p>
-                    <Badge variant="outline">{cylinder.cylinderType || "N/A"}</Badge>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Weight</p>
-                    <p className="text-lg font-semibold">{cylinder.weight || "N/A"} kg</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Price</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      ₹{cylinder.price?.toLocaleString() || "N/A"}
-                    </p>
-                  </div>
-                  {cylinder.totalQuantity !== undefined && (
-                    <div>
-                      <p className="text-sm text-gray-600 mb-1">Available Stock</p>
-                      <p className="text-lg font-semibold">
-                        {cylinder.totalQuantity > 0 ? (
-                          <span className="text-green-600">{cylinder.totalQuantity} units</span>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Weight</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Stock</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cylinders.map((cylinder) => {
+                  let quantityValue = null;
+                  if (cylinder.totalQuantity !== undefined && cylinder.totalQuantity !== null) {
+                    if (typeof cylinder.totalQuantity === 'object' && cylinder.totalQuantity?.number !== undefined) {
+                      quantityValue = cylinder.totalQuantity.number;
+                    } else if (typeof cylinder.totalQuantity === 'number') {
+                      quantityValue = cylinder.totalQuantity;
+                    }
+                  }
+                  const isAvailable = quantityValue === null || quantityValue > 0;
+                  
+                  return (
+                    <TableRow key={cylinder._id}>
+                      <TableCell>{cylinder.cylinderName || "Gas Cylinder"}</TableCell>
+                      <TableCell>{cylinder.cylinderType || "N/A"}</TableCell>
+                      <TableCell>{cylinder.weight || "N/A"} kg</TableCell>
+                      <TableCell>₹{cylinder.price?.toLocaleString() || "N/A"}</TableCell>
+                      <TableCell>
+                        {isAvailable ? (
+                          <span className="text-green-600">Available</span>
                         ) : (
-                          <span className="text-red-600">Out of Stock</span>
+                          <span className="text-red-600">Not Available</span>
                         )}
-                      </p>
-                    </div>
-                  )}
-                  <Button
-                    onClick={() => handleBookCylinder(cylinder)}
-                    disabled={cylinder.totalQuantity !== undefined && cylinder.totalQuantity === 0}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    Book Cylinder
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          onClick={() => handleBookCylinder(cylinder)}
+                          disabled={quantityValue !== null && quantityValue === 0}
+                        >
+                          Book
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         )}
 
-      
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Book Cylinder</DialogTitle>
-              <DialogDescription>
-                Enter the quantity of cylinders you want to book
-              </DialogDescription>
             </DialogHeader>
             {selectedCylinder && (
               <form onSubmit={handleBookingSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cylinder-name">Cylinder</Label>
-                  <p className="text-sm font-semibold">{selectedCylinder.cylinderName || "Gas Cylinder"}</p>
-                  <p className="text-xs text-gray-500">{selectedCylinder.cylinderType}</p>
+                <div>
+                  <Label>Cylinder</Label>
+                  <div>{selectedCylinder.cylinderName || "Gas Cylinder"}</div>
+                  <div className="text-sm text-gray-500">{selectedCylinder.cylinderType}</div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price per Unit</Label>
-                  <p className="text-lg font-semibold text-green-600">
+                <div>
+                  <Label>Price</Label>
+                  <div className="text-lg font-semibold text-green-600">
                     ₹{selectedCylinder.price?.toLocaleString() || "N/A"}
-                  </p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantity</Label>
+                <div>
+                  <Label>Quantity</Label>
                   <Input
-                    id="quantity"
                     type="number"
                     min="1"
                     value={quantity}
                     onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                    placeholder="Quantity"
                     required
                   />
-                  {selectedCylinder.totalQuantity !== undefined && (
-                    <p className="text-xs text-gray-500">
-                      Available: {selectedCylinder.totalQuantity} units
-                    </p>
-                  )}
                 </div>
                 <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Total Amount</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <div className="text-sm text-gray-600 mb-1">Total Amount</div>
+                  <div className="text-2xl font-bold text-green-600">
                     ₹{((quantity || 0) * (selectedCylinder.price || 0)).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Payment will be required after delivery
-                  </p>
+                  </div>
                 </div>
-                <div className="space-y-2">
+                <div>
+                  <Label>Delivery Date</Label>
                   <CustomDatePicker
-                    label="Preferred Delivery Date"
                     selected={deliveryDate}
                     onChange={(date) => setDeliveryDate(date)}
                     minDate={new Date()}
-                    placeholderText="Select delivery date"
-                    dateFormat="MMMM d, yyyy"
-                    required
+                    placeholderText="Select date"
+                    dateFormat="MMM d, yyyy"
                     className="w-full"
                   />
-                  <p className="text-xs text-gray-500">
-                    Select your preferred delivery date. We'll try to deliver on this date.
-                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="payment-method">Payment Method</Label>
-                  <div className="flex gap-4">
+                <div>
+                  <Label>Payment Method</Label>
+                  <div className="flex gap-4 mt-2">
                     <label className="flex items-center space-x-2 cursor-pointer">
                       <input
                         type="radio"
@@ -247,7 +229,7 @@ export default function AvailableCylinders() {
                         onChange={(e) => setPaymentMethod(e.target.value)}
                         className="w-4 h-4"
                       />
-                      <span>Cash (Pay on Delivery)</span>
+                      <span>Cash</span>
                     </label>
                     <label className="flex items-center space-x-2 cursor-pointer">
                       <input
@@ -258,18 +240,13 @@ export default function AvailableCylinders() {
                         onChange={(e) => setPaymentMethod(e.target.value)}
                         className="w-4 h-4"
                       />
-                      <span>Online (Pay after Delivery)</span>
+                      <span>Online</span>
                     </label>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    {paymentMethod === "cash" 
-                      ? "You will pay in cash when the cylinder is delivered"
-                      : "You will pay online after the cylinder is delivered"}
-                  </p>
                 </div>
                 {bookingError && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-600">{bookingError}</p>
+                    <div className="text-sm text-red-600">{bookingError}</div>
                   </div>
                 )}
                 <DialogFooter>
@@ -291,10 +268,7 @@ export default function AvailableCylinders() {
                         Booking...
                       </>
                     ) : (
-                      <>
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        Book Now
-                      </>
+                      "Book"
                     )}
                   </Button>
                 </DialogFooter>
@@ -302,7 +276,8 @@ export default function AvailableCylinders() {
             )}
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

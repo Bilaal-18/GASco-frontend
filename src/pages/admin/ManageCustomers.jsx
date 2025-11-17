@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "@/config/config";
 import Sidebar from "@/components/layout/SideBar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import {
   Card,
   CardHeader,
@@ -27,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -256,27 +257,24 @@ export default function ManageCustomers() {
   };
 
   return (
-    <div>
+    <SidebarProvider>
       <Sidebar />
 
-      <div className="p-6 space-y-6 ml-64 max-w-[calc(100%-16rem)]">
+      <SidebarInset>
+        <div className="p-6 space-y-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-4">Manage Customers</h1>
+        </div>
         <Card>
-          <CardHeader>
-            <CardTitle>Manage Customers</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
             <div className="flex justify-between items-center mb-4">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search by name, email, or phone..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <Input
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="max-w-sm"
+              />
               <Button onClick={handleAdd}>
-                <Plus className="w-4 h-4 mr-2" />
                 Add Customer
               </Button>
             </div>
@@ -318,8 +316,6 @@ export default function ManageCustomers() {
                             onClick={() => handleView(cust)}
                             variant="outline"
                             size="sm"
-                            className="flex items-center gap-1"
-                            title="View customer"
                           >
                             View
                           </Button>
@@ -327,10 +323,7 @@ export default function ManageCustomers() {
                             onClick={() => handleEdit(cust)}
                             variant="outline"
                             size="sm"
-                            className="flex items-center gap-1"
-                            title="Edit customer"
                           >
-                            <Edit className="w-4 h-4" />
                             Edit
                           </Button>
                           <AlertDialog>
@@ -338,10 +331,7 @@ export default function ManageCustomers() {
                               <Button
                                 variant="destructive"
                                 size="sm"
-                                className="flex items-center gap-1"
-                                title="Delete customer"
                               >
-                                <Trash2 className="w-4 h-4" />
                                 Delete
                               </Button>
                             </AlertDialogTrigger>
@@ -494,56 +484,46 @@ export default function ManageCustomers() {
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div>
-                <Label htmlFor="username">Username *</Label>
+                <Label>Username</Label>
                 <Input
-                  id="username"
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
-                  placeholder="Enter username"
+                  placeholder="Username"
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email *</Label>
+                <Label>Email</Label>
                 <Input
-                  id="email"
                   name="email"
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="Enter email"
+                  placeholder="Email"
                 />
               </div>
               <div>
-                <Label htmlFor="phoneNo">Phone Number *</Label>
+                <Label>Phone</Label>
                 <Input
-                  id="phoneNo"
                   name="phoneNo"
                   value={formData.phoneNo}
                   onChange={handleInputChange}
-                  placeholder="Enter 10-digit phone number"
+                  placeholder="Phone"
                   maxLength={10}
                 />
               </div>
               <div>
-                <Label htmlFor="password">
-                  Password {!editingCustomer && "*"}
-                </Label>
+                <Label>Password</Label>
                 <Input
-                  id="password"
                   name="password"
                   type="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  placeholder={
-                    editingCustomer
-                      ? "Leave blank to keep current password"
-                      : "Enter password (min 8 characters)"
-                  }
+                  placeholder={editingCustomer ? "Leave blank to keep current" : "Password"}
                 />
               </div>
               <div>
-                <Label htmlFor="agent">Agent *</Label>
+                <Label>Agent</Label>
                 <Select
                   value={formData.agent}
                   onValueChange={(value) =>
@@ -562,55 +542,44 @@ export default function ManageCustomers() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="border-t pt-4">
-                <Label className="text-base font-semibold mb-3 block">
-                  Address
-                </Label>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="street">Street</Label>
-                    <Input
-                      id="street"
-                      name="address.street"
-                      value={formData.address.street}
-                      onChange={handleInputChange}
-                      placeholder="Enter street address"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        name="address.city"
-                        value={formData.address.city}
-                        onChange={handleInputChange}
-                        placeholder="Enter city"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="state">State</Label>
-                      <Input
-                        id="state"
-                        name="address.state"
-                        value={formData.address.state}
-                        onChange={handleInputChange}
-                        placeholder="Enter state"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="pincode">Pincode</Label>
-                    <Input
-                      id="pincode"
-                      name="address.pincode"
-                      value={formData.address.pincode}
-                      onChange={handleInputChange}
-                      placeholder="Enter 6-digit pincode"
-                      maxLength={6}
-                    />
-                  </div>
+              <div>
+                <Label>Street</Label>
+                <Input
+                  name="address.street"
+                  value={formData.address.street}
+                  onChange={handleInputChange}
+                  placeholder="Street"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>City</Label>
+                  <Input
+                    name="address.city"
+                    value={formData.address.city}
+                    onChange={handleInputChange}
+                    placeholder="City"
+                  />
                 </div>
+                <div>
+                  <Label>State</Label>
+                  <Input
+                    name="address.state"
+                    value={formData.address.state}
+                    onChange={handleInputChange}
+                    placeholder="State"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Pincode</Label>
+                <Input
+                  name="address.pincode"
+                  value={formData.address.pincode}
+                  onChange={handleInputChange}
+                  placeholder="Pincode"
+                  maxLength={6}
+                />
               </div>
             </div>
             <DialogFooter>
@@ -624,17 +593,14 @@ export default function ManageCustomers() {
                 Cancel
               </Button>
               <Button onClick={handleSubmit} disabled={loading}>
-                {loading
-                  ? "Saving..."
-                  : editingCustomer
-                  ? "Update Customer"
-                  : "Add Customer"}
+                {loading ? "Saving..." : editingCustomer ? "Update" : "Add"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 

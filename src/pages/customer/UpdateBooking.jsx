@@ -3,11 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchBookingById, updateBooking } from "@/store/slices/customer/customerBookingsSlice";
 import CustomerSidebar from "@/components/layout/CustomerSidebar";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function UpdateBooking() {
@@ -59,122 +60,112 @@ export default function UpdateBooking() {
 
   if (loading) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <CustomerSidebar />
-        <div className="flex-1 ml-64 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   if (!selectedBooking) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <CustomerSidebar />
-        <div className="flex-1 ml-64 p-8">
-          <Button variant="outline" onClick={() => navigate("/customer/bookings")} className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Bookings
-          </Button>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-red-600">Booking not found</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="p-8">
+            <Button variant="outline" onClick={() => navigate("/customer/bookings")} className="mb-4">
+              Back
+            </Button>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-red-600">Booking not found</div>
+              </CardContent>
+            </Card>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   const totalAmount = formData.quantity * (selectedBooking.cylinder?.price || 0);
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <SidebarProvider>
       <CustomerSidebar />
-      <div className="flex-1 ml-64 p-8">
-        <Button variant="outline" onClick={() => navigate("/customer/bookings")} className="mb-6">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Bookings
-        </Button>
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Update Booking</h1>
-          <p className="text-gray-600">Booking ID: #{selectedBooking._id?.slice(-8).toUpperCase()}</p>
+      <SidebarInset>
+        <div className="p-8">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Update Booking</h1>
+          <Button variant="outline" onClick={() => navigate("/customer/bookings")}>
+            Back
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Booking Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <Card className="max-w-2xl">
+          <CardContent className="p-4">
+            <div className="mb-4">
+              <div className="text-sm text-gray-600">Booking ID</div>
+              <div className="font-semibold">#{selectedBooking._id?.slice(-8).toUpperCase()}</div>
+            </div>
+            <div className="mb-4">
+              <div className="text-sm text-gray-600">Cylinder</div>
+              <div className="font-semibold">{selectedBooking.cylinder?.cylinderName || selectedBooking.cylinder?.cylinderType || "N/A"}</div>
+            </div>
+            <div className="mb-4">
+              <div className="text-sm text-gray-600">Price per Unit</div>
+              <div className="font-semibold">₹{selectedBooking.cylinder?.price?.toLocaleString() || 0}</div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Cylinder</p>
-                <p className="font-semibold">{selectedBooking.cylinder?.cylinderName || "N/A"}</p>
-                <p className="text-sm text-gray-500">{selectedBooking.cylinder?.cylinderType}</p>
+                <Label>Quantity</Label>
+                <Input
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  value={formData.quantity}
+                  onChange={handleChange}
+                  placeholder="Quantity"
+                  required
+                />
+                <div className="text-sm text-gray-500 mt-1">
+                  Current: {selectedBooking.quantity || 0}
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Price per Unit</p>
-                <p className="font-semibold">₹{selectedBooking.cylinder?.price?.toLocaleString() || 0}</p>
+
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="text-sm text-gray-600 mb-1">Total Amount</div>
+                <div className="text-2xl font-bold text-green-600">₹{totalAmount.toLocaleString()}</div>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Update Quantity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <Input
-                    id="quantity"
-                    name="quantity"
-                    type="number"
-                    min="1"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    required
-                  />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Current quantity: {selectedBooking.quantity || 0}
-                  </p>
-                </div>
-
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Total Amount</p>
-                  <p className="text-2xl font-bold text-green-600">₹{totalAmount.toLocaleString()}</p>
-                </div>
-
-                <div className="flex gap-4">
-                  <Button type="submit" disabled={updateLoading} className="flex-1">
-                    {updateLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4 mr-2" />
-                        Update Booking
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => navigate("/customer/bookings")}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+              <div className="flex gap-4">
+                <Button type="submit" disabled={updateLoading} className="flex-1">
+                  {updateLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update"
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate("/customer/bookings")}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
         </div>
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

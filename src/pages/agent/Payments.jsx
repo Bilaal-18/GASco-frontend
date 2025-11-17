@@ -1,25 +1,20 @@
 import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
 import AgentSidebar from "@/components/layout/AgentSidebar";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Wallet, 
-  DollarSign, 
-  Calendar, 
-  User, 
-  Package, 
-  CreditCard, 
-  Loader2,
-  Search,
-  Filter,
-  CheckCircle2,
-  Clock
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import axios from "@/config/config";
 import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function Payments() {
   const [payments, setPayments] = useState([]);
@@ -27,6 +22,8 @@ export default function Payments() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [stats, setStats] = useState({
     totalAmount: 0,
     onlinePayments: 0,
@@ -116,240 +113,176 @@ export default function Payments() {
       year: "numeric",
       month: "short",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
-  const getMethodBadge = (method) => {
-    if (method === "razorpay" || method === "online") {
-      return (
-        <Badge className="bg-purple-500 text-white">
-          <CreditCard className="w-3 h-3 mr-1" />
-          Online
-        </Badge>
-      );
+  const getCylinderName = (payment) => {
+    // Check if cylinder is directly on payment
+    if (payment.cylinder) {
+      if (typeof payment.cylinder === 'object' && payment.cylinder.cylinderType) {
+        return payment.cylinder.cylinderType || payment.cylinder.cylinderName || payment.cylinder.name || "N/A";
+      }
     }
-    return (
-      <Badge className="bg-gray-500 text-white">
-        <DollarSign className="w-3 h-3 mr-1" />
-        Cash
-      </Badge>
-    );
+    
+    // Check if cylinder is in booking
+    if (payment.booking?.cylinder) {
+      const cylinder = payment.booking.cylinder;
+      if (typeof cylinder === 'object') {
+        return cylinder.cylinderType || cylinder.cylinderName || cylinder.name || "N/A";
+      }
+    }
+    
+    return "N/A";
   };
 
-  const getStatusBadge = (status) => {
-    if (status === "completed" || status === "paid") {
-      return (
-        <Badge className="bg-green-500 text-white">
-          <CheckCircle2 className="w-3 h-3 mr-1" />
-          Completed
-        </Badge>
-      );
-    }
-    return (
-      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-        <Clock className="w-3 h-3 mr-1" />
-        Pending
-      </Badge>
-    );
-  };
+  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPayments = filteredPayments.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, methodFilter]);
 
   if (loading) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <AgentSidebar />
-        <div className="flex-1 ml-64 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <SidebarProvider>
       <AgentSidebar />
-      <div className="flex-1 ml-64 p-8">
+      <SidebarInset>
+        <div className="p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-            <Wallet className="w-8 h-8 text-blue-600" />
-            Payment Details
-          </h1>
-          <p className="text-gray-600">View all customer payments received</p>
+          <h1 className="text-2xl font-bold mb-4">Customer Payments</h1>
         </div>
 
-        
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-4 gap-4 mb-6">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-blue-600">{stats.totalCount}</p>
+            <CardContent className="p-4">
+              <div className="text-sm">Total Payments</div>
+              <div className="text-2xl font-bold">{stats.totalCount}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Amount</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-green-600">₹{stats.totalAmount.toLocaleString()}</p>
+            <CardContent className="p-4">
+              <div className="text-sm">Total Amount</div>
+              <div className="text-2xl font-bold">₹{stats.totalAmount.toLocaleString()}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Online Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-purple-600">{stats.onlinePayments}</p>
+            <CardContent className="p-4">
+              <div className="text-sm">Online</div>
+              <div className="text-2xl font-bold">{stats.onlinePayments}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Cash Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-gray-600">{stats.cashPayments}</p>
+            <CardContent className="p-4">
+              <div className="text-sm">Cash</div>
+              <div className="text-2xl font-bold">{stats.cashPayments}</div>
             </CardContent>
           </Card>
         </div>
 
-      
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  placeholder="Search by customer, booking ID, transaction ID..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-400" />
-                <select
-                  value={methodFilter}
-                  onChange={(e) => setMethodFilter(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Payment Methods</option>
-                  <option value="online">Online</option>
-                  <option value="cash">Cash</option>
-                </select>
-              </div>
-              <div className="text-sm text-gray-500 flex items-center">
-                Showing {filteredPayments.length} of {payments.length} payments
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mb-6 flex gap-2">
+          <Input
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1"
+          />
+          <select
+            value={methodFilter}
+            onChange={(e) => setMethodFilter(e.target.value)}
+            className="px-3 py-2 border rounded"
+          >
+            <option value="all">All Methods</option>
+            <option value="online">Online</option>
+            <option value="cash">Cash</option>
+          </select>
+        </div>
 
-        
         {filteredPayments.length === 0 ? (
+          <div className="text-center py-8">No payments found</div>
+        ) : (
           <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-12">
-                <Wallet className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">
-                  {search || methodFilter !== "all"
-                    ? "No payments found matching your filters."
-                    : "No payments found."}
-                </p>
+            <CardContent className="p-4">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Cylinder</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currentPayments.map((payment) => (
+                      <TableRow key={payment._id}>
+                        <TableCell>
+                          {payment.customer?.username || payment.customer?.businessName || "N/A"}
+                        </TableCell>
+                        <TableCell>{payment.customer?.phoneNo || "N/A"}</TableCell>
+                        <TableCell>{getCylinderName(payment)}</TableCell>
+                        <TableCell>{payment.booking?.quantity || payment.quantity || 0}</TableCell>
+                        <TableCell>₹{payment.amount?.toLocaleString() || 0}</TableCell>
+                        <TableCell>
+                          {payment.method === "razorpay" || payment.method === "online" ? "Online" : "Cash"}
+                        </TableCell>
+                        <TableCell>
+                          {payment.status === "completed" || payment.status === "paid" ? "Paid" : "Pending"}
+                        </TableCell>
+                        <TableCell>{formatDate(payment.paymentDate || payment.createdAt)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredPayments.length)} of {filteredPayments.length}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-6">
-            {filteredPayments.map((payment) => (
-              <Card key={payment._id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <CardTitle className="text-xl">
-                          Payment #{payment.transactionID?.slice(-8) || payment._id.slice(-8)}
-                        </CardTitle>
-                        {getMethodBadge(payment.method)}
-                        {getStatusBadge(payment.status)}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {formatDate(payment.paymentDate || payment.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-green-600">
-                        ₹{payment.amount?.toLocaleString() || 0}
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    
-                    <div className="space-y-3">
-                      <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        Customer Details
-                      </h3>
-                      <div className="text-sm space-y-1 text-gray-600">
-                        <p>
-                          <strong>Name:</strong> {payment.customer?.username || payment.customer?.businessName || "N/A"}
-                        </p>
-                        <p>
-                          <strong>Phone:</strong> {payment.customer?.phoneNo || "N/A"}
-                        </p>
-                        <p>
-                          <strong>Email:</strong> {payment.customer?.email || "N/A"}
-                        </p>
-                      </div>
-                    </div>
-
-                    
-                    <div className="space-y-3">
-                      <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                        <Package className="w-4 h-4" />
-                        Booking & Transaction
-                      </h3>
-                      <div className="text-sm space-y-1 text-gray-600">
-                        <p>
-                          <strong>Booking ID:</strong> {payment.booking?._id?.slice(-8) || "N/A"}
-                        </p>
-                        <p>
-                          <strong>Cylinder:</strong> {payment.booking?.cylinder?.cylinderType || payment.booking?.cylinder?.cylinderName || "N/A"}
-                        </p>
-                        <p>
-                          <strong>Quantity:</strong> {payment.booking?.quantity || 0}
-                        </p>
-                        {payment.razorpayOrderId && (
-                          <p>
-                            <strong>Razorpay Order:</strong> {payment.razorpayOrderId}
-                          </p>
-                        )}
-                        {payment.razorpayPaymentId && (
-                          <p>
-                            <strong>Razorpay Payment:</strong> {payment.razorpayPaymentId}
-                          </p>
-                        )}
-                        {payment.transactionID && (
-                          <p>
-                            <strong>Transaction ID:</strong> {payment.transactionID}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
         )}
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 

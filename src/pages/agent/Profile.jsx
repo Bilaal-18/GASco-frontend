@@ -11,20 +11,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Phone,
-  Mail,
-  MapPin,
-  Edit,
-  Package,
-  Users,
-  DollarSign,
-  ClipboardList,
   User,
-  Lock,
-  Truck,
 } from "lucide-react";
 import axios from "@/config/config";
 import AgentSidebar from "@/components/layout/AgentSidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ProfileImageUpload from "@/components/ProfileImageUpload";
 
@@ -294,51 +285,39 @@ export default function ProfileDashboard() {
 
   if (!agent) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <AgentSidebar />
-        <div className="flex-1 ml-64 flex justify-center items-center">
-          <div className="text-center text-red-500">
-            <User className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <p className="text-lg">Agent profile not found</p>
+        <SidebarInset>
+          <div className="flex justify-center items-center min-h-screen">
+            <div className="text-center text-red-500">
+              <User className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+              <p className="text-lg">Agent profile not found</p>
+            </div>
           </div>
-        </div>
-      </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <SidebarProvider>
       <AgentSidebar />
-
-      <div className="flex-1 ml-64 p-8">
-        
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">My Profile</h1>
-            <p className="text-gray-600">Manage your account information and view your statistics</p>
-          </div>
+      <SidebarInset>
+        <div className="p-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold mb-4">Profile</h1>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setPasswordDialogOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Lock className="w-4 h-4" />
+            <Button variant="outline" onClick={() => setPasswordDialogOpen(true)}>
               Change Password
             </Button>
-            <Button onClick={() => setEditDialogOpen(true)} className="flex items-center gap-2">
-              <Edit className="w-4 h-4" />
-              Edit Profile
-            </Button>
+            <Button onClick={() => setEditDialogOpen(true)}>Edit Profile</Button>
           </div>
         </div>
 
-        
-        <Card className="mb-8 shadow-lg">
-          <CardContent className="p-8">
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-              
-              <div className="flex-shrink-0">
+        <Card className="mb-6 max-w-2xl">
+          <CardContent className="p-4">
+            <div className="flex gap-8">
+              <div>
                 <ProfileImageUpload
                   currentImage={agent?.profilepic}
                   onImageUploaded={async (imageUrl) => {
@@ -349,34 +328,19 @@ export default function ProfileDashboard() {
                   updateEndpoint="/api/updateAgent"
                 />
               </div>
-              
-            
-              <div className="flex-1 text-center md:text-left">
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                  {agent.agentname || "Agent"}
-                </h2>
-                <div className="space-y-2 mt-4">
-                  <p className="text-gray-600 flex items-center justify-center md:justify-start gap-2">
-                    <Mail className="w-5 h-5 text-gray-400" />
-                    <span>{agent.email}</span>
-                  </p>
-                  <p className="text-gray-600 flex items-center justify-center md:justify-start gap-2">
-                    <Phone className="w-5 h-5 text-gray-400" />
-                    <span>{agent.phoneNo || "Not provided"}</span>
-                  </p>
-                  <p className="text-gray-600 flex items-center justify-center md:justify-start gap-2">
-                    <Truck className="w-5 h-5 text-gray-400" />
-                    <span>Vehicle: {agent.vehicleNo || "Not provided"}</span>
-                  </p>
+              <div className="flex-1">
+                <div className="text-xl font-bold mb-4">{agent.agentname || "Agent"}</div>
+                <div className="space-y-2">
+                  <div>Email: {agent.email}</div>
+                  <div>Phone: {agent.phoneNo || "N/A"}</div>
+                  <div>Vehicle: {agent.vehicleNo || "N/A"}</div>
                   {agent.address && (
-                    <p className="text-gray-600 flex items-center justify-center md:justify-start gap-2">
-                      <MapPin className="w-5 h-5 text-gray-400" />
-                      <span>
-                        {agent.address.street
-                          ? `${agent.address.street}, ${agent.address.city || ""}, ${agent.address.state || ""}`
-                          : "Address not provided"}
-                      </span>
-                    </p>
+                    <>
+                      <div>Street: {agent.address.street || "N/A"}</div>
+                      <div>City: {agent.address.city || "N/A"}</div>
+                      <div>State: {agent.address.state || "N/A"}</div>
+                      <div>Pincode: {agent.address.pincode || "N/A"}</div>
+                    </>
                   )}
                 </div>
               </div>
@@ -385,180 +349,88 @@ export default function ProfileDashboard() {
         </Card>
 
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg font-medium">Total Stock</CardTitle>
-              <Package className="w-6 h-6 opacity-90" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold">{stats.totalStock}</p>
-              <p className="text-sm opacity-90 mt-1">Cylinders in inventory</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg font-medium">Customers</CardTitle>
-              <Users className="w-6 h-6 opacity-90" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold">{stats.customersCount}</p>
-              <p className="text-sm opacity-90 mt-1">Assigned customers</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg font-medium">Pending Payments</CardTitle>
-              <DollarSign className="w-6 h-6 opacity-90" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold">₹{stats.pendingPayments.toLocaleString()}</p>
-              <p className="text-sm opacity-90 mt-1">Amount to be collected</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg font-medium">Today's Bookings</CardTitle>
-              <ClipboardList className="w-6 h-6 opacity-90" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold">{stats.todayBookings}</p>
-              <p className="text-sm opacity-90 mt-1">New bookings today</p>
-            </CardContent>
-          </Card>
-        </div>
-
-      
-        {agent.address && (
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                Address Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">Street</p>
-                  <p className="font-semibold">{agent.address.street || "Not provided"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">City</p>
-                  <p className="font-semibold">{agent.address.city || "Not provided"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">State</p>
-                  <p className="font-semibold">{agent.address.state || "Not provided"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Pincode</p>
-                  <p className="font-semibold">{agent.address.pincode || "Not provided"}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Profile</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 mt-4">
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="agentname">Agent Name *</Label>
+                <Label>Name</Label>
                 <Input
-                  id="agentname"
                   name="agentname"
                   value={formData.agentname}
                   onChange={handleInputChange}
-                  placeholder="Enter agent name"
+                  placeholder="Name"
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email *</Label>
+                <Label>Email</Label>
                 <Input
-                  id="email"
                   name="email"
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="Enter email address"
+                  placeholder="Email"
                 />
               </div>
               <div>
-                <Label htmlFor="phoneNo">Phone Number *</Label>
+                <Label>Phone</Label>
                 <Input
-                  id="phoneNo"
                   name="phoneNo"
                   value={formData.phoneNo}
                   onChange={handleInputChange}
-                  placeholder="Enter 10-digit phone number"
+                  placeholder="Phone"
                   maxLength={10}
                 />
               </div>
               <div>
-                <Label htmlFor="vehicleNo">Vehicle Number *</Label>
+                <Label>Vehicle Number</Label>
                 <Input
-                  id="vehicleNo"
                   name="vehicleNo"
                   value={formData.vehicleNo}
                   onChange={handleInputChange}
-                  placeholder="Enter vehicle number"
+                  placeholder="Vehicle Number"
                 />
               </div>
-              <div className="border-t pt-4">
-                <Label className="text-base font-semibold mb-3 block">Address</Label>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="street">Street</Label>
-                    <Input
-                      id="street"
-                      name="address.street"
-                      value={formData.address.street}
-                      onChange={handleInputChange}
-                      placeholder="Enter street address"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        name="address.city"
-                        value={formData.address.city}
-                        onChange={handleInputChange}
-                        placeholder="Enter city"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="state">State</Label>
-                      <Input
-                        id="state"
-                        name="address.state"
-                        value={formData.address.state}
-                        onChange={handleInputChange}
-                        placeholder="Enter state"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="pincode">Pincode</Label>
-                    <Input
-                      id="pincode"
-                      name="address.pincode"
-                      value={formData.address.pincode}
-                      onChange={handleInputChange}
-                      placeholder="Enter 6-digit pincode"
-                      maxLength={6}
-                    />
-                  </div>
+              <div>
+                <Label>Street</Label>
+                <Input
+                  name="address.street"
+                  value={formData.address.street}
+                  onChange={handleInputChange}
+                  placeholder="Street"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>City</Label>
+                  <Input
+                    name="address.city"
+                    value={formData.address.city}
+                    onChange={handleInputChange}
+                    placeholder="City"
+                  />
                 </div>
+                <div>
+                  <Label>State</Label>
+                  <Input
+                    name="address.state"
+                    value={formData.address.state}
+                    onChange={handleInputChange}
+                    placeholder="State"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Pincode</Label>
+                <Input
+                  name="address.pincode"
+                  value={formData.address.pincode}
+                  onChange={handleInputChange}
+                  placeholder="Pincode"
+                  maxLength={6}
+                />
               </div>
             </div>
             <DialogFooter>
@@ -585,7 +457,7 @@ export default function ProfileDashboard() {
                 Cancel
               </Button>
               <Button onClick={handleUpdateProfile} disabled={isSubmitting}>
-                {isSubmitting ? "Updating..." : "Update Profile"}
+                {isSubmitting ? "Updating..." : "Update"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -599,9 +471,8 @@ export default function ProfileDashboard() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="oldPassword">Current Password *</Label>
+                <Label>Current Password</Label>
                 <Input
-                  id="oldPassword"
                   type="password"
                   value={passwordData.oldPassword}
                   onChange={(e) =>
@@ -610,13 +481,12 @@ export default function ProfileDashboard() {
                       oldPassword: e.target.value,
                     })
                   }
-                  placeholder="Enter current password"
+                  placeholder="Current Password"
                 />
               </div>
               <div>
-                <Label htmlFor="newPassword">New Password *</Label>
+                <Label>New Password</Label>
                 <Input
-                  id="newPassword"
                   type="password"
                   value={passwordData.newPassword}
                   onChange={(e) =>
@@ -625,13 +495,12 @@ export default function ProfileDashboard() {
                       newPassword: e.target.value,
                     })
                   }
-                  placeholder="Enter new password (min 8 characters)"
+                  placeholder="New Password"
                 />
               </div>
               <div>
-                <Label htmlFor="confirmPassword">Confirm New Password *</Label>
+                <Label>Confirm Password</Label>
                 <Input
-                  id="confirmPassword"
                   type="password"
                   value={passwordData.confirmPassword}
                   onChange={(e) =>
@@ -640,7 +509,7 @@ export default function ProfileDashboard() {
                       confirmPassword: e.target.value,
                     })
                   }
-                  placeholder="Confirm new password"
+                  placeholder="Confirm Password"
                 />
               </div>
             </div>
@@ -659,12 +528,13 @@ export default function ProfileDashboard() {
                 Cancel
               </Button>
               <Button onClick={handleUpdatePassword} disabled={isSubmitting}>
-                {isSubmitting ? "Updating..." : "Update Password"}
+                {isSubmitting ? "Updating..." : "Update"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -5,9 +5,16 @@
 // Shows p50, p80, p95 predictions and suggested stock levels for the next 14 days
 
 import { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   BarChart,
   Bar,
@@ -18,16 +25,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import {
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  Package,
-  Loader2,
-  AlertCircle,
-  RefreshCw,
-  BarChart3
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { getAgentForecast, getAgentForecastStats } from "@/services/forecastApi";
 import { toast } from "sonner";
 
@@ -268,39 +266,27 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
     return null;
   };
 
-  // ============================================
-  // LOADING STATE
-  // ============================================
   if (loading) {
     return (
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-4">
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="ml-2 text-gray-600">Loading forecast data...</span>
+            <span className="ml-2 text-gray-600">Loading...</span>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  // ============================================
-  // ERROR STATE
-  // ============================================
   if (error) {
     return (
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-4">
           <div className="text-center py-12">
-            <AlertCircle className="w-16 h-16 text-red-300 mx-auto mb-4" />
-            <p className="text-red-600 text-lg mb-2">Error Loading Forecast</p>
-            <p className="text-gray-500">{error}</p>
-            <Button
-              onClick={handleRefresh}
-              className="mt-4"
-              variant="outline"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
+            <p className="text-red-600 mb-2">Error Loading Forecast</p>
+            <p className="text-gray-500 mb-4">{error}</p>
+            <Button onClick={handleRefresh} variant="outline">
               Try Again
             </Button>
           </div>
@@ -309,22 +295,13 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
     );
   }
 
-  // ============================================
-  // EMPTY STATE
-  // ============================================
   if (!forecasts || forecasts.length === 0) {
     return (
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-4">
           <div className="text-center py-12">
-            <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">No forecast data available</p>
-            <Button
-              onClick={handleRefresh}
-              className="mt-4"
-              variant="outline"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
+            <p className="text-gray-500 mb-4">No forecast data available</p>
+            <Button onClick={handleRefresh} variant="outline">
               Generate Forecast
             </Button>
           </div>
@@ -386,68 +363,51 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
     };
   });
 
-  // ============================================
-  // MAIN RENDER
-  // ============================================
   return (
     <div className="space-y-6">
-      {/* ============================================
-          Header Section - Simplified
-          ============================================ */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <BarChart3 className="w-6 h-6 text-blue-600" />
-                Next 7 Days Demand Prediction
-              </CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
-                See how many cylinders you'll need each day
-              </p>
-            </div>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="font-semibold">Next 7 Days Forecast</div>
             <Button
               onClick={handleRefresh}
               variant="outline"
               size="sm"
               disabled={refreshing}
             >
-              <RefreshCw
-                className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
-              />
-              Refresh
+              {refreshing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                "Refresh"
+              )}
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {/* Simple Stats */}
           {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <p className="text-sm text-gray-600 mb-1">Average Daily Need</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {Math.round(stats.averageDailyDemand || 0)}
-                </p>
-                <p className="text-xs text-gray-500">cylinders</p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <p className="text-sm text-gray-600 mb-1">Total Week Need</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {stats.totalForecastedDemand?.p50 || 0}
-                </p>
-                <p className="text-xs text-gray-500">cylinders</p>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                <p className="text-sm text-gray-600 mb-1">Recommended Stock</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {stats.totalSuggestedStock || 0}
-                </p>
-                <p className="text-xs text-gray-500">cylinders</p>
-              </div>
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-sm">Average Daily Need</div>
+                  <div className="text-2xl font-bold">{Math.round(stats.averageDailyDemand || 0)}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-sm">Total Week Need</div>
+                  <div className="text-2xl font-bold">{stats.totalForecastedDemand?.p50 || 0}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="text-sm">Recommended Stock</div>
+                  <div className="text-2xl font-bold">{stats.totalSuggestedStock || 0}</div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
-          {/* Forecast Chart - Simplified */}
           <div className="mt-6">
             <ResponsiveContainer width="100%" height={350}>
               <BarChart 
@@ -484,37 +444,26 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
         </CardContent>
       </Card>
 
-      {/* ============================================
-          Forecast Table - Simplified
-          ============================================ */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            Daily Breakdown
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-4">
+          <div className="mb-4 font-semibold">Daily Breakdown</div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-3 text-left font-semibold">Date</th>
-                  <th className="p-3 text-right font-semibold">Expected Need</th>
-                  <th className="p-3 text-right font-semibold">Recommended Stock</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Expected Need</TableHead>
+                  <TableHead>Recommended Stock</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {sortedForecasts.slice(0, 7).map((forecast, index) => {
-                  // Parse date properly from ISO string format (YYYY-MM-DD)
                   const dateStr = forecast.date;
                   let date;
                   
                   if (typeof dateStr === 'string') {
-                    // Parse ISO date string (YYYY-MM-DD) - split to avoid timezone issues
                     const parts = dateStr.split('T')[0].split('-');
                     if (parts.length === 3) {
-                      // Create date in local timezone using year, month, day
                       date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                     } else {
                       date = new Date(dateStr);
@@ -523,11 +472,8 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
                     date = new Date(dateStr);
                   }
                   
-                  // Validate date - if invalid, log error but don't calculate from today
-                  // Use the actual date from forecast data
                   if (isNaN(date.getTime())) {
                     console.error("Invalid date in forecast:", dateStr, "at index:", index);
-                    // Only fallback to today if date is completely invalid
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
                     date = new Date(today);
@@ -535,33 +481,22 @@ export default function AgentForecastChart({ agentId, horizon = 14 }) {
                   }
                   
                   return (
-                    <tr
-                      key={index}
-                      className="border-t hover:bg-blue-50 transition-colors"
-                    >
-                      <td className="p-3 font-medium">
+                    <TableRow key={index}>
+                      <TableCell>
                         {date.toLocaleDateString("en-US", {
                           weekday: "short",
                           month: "short",
                           day: "numeric",
                           year: "numeric"
                         })}
-                      </td>
-                      <td className="p-3 text-right">
-                        <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded font-semibold">
-                          {forecast.p50 || 0}
-                        </span>
-                      </td>
-                      <td className="p-3 text-right">
-                        <Badge className="bg-purple-600 text-white px-3 py-1 text-sm font-semibold">
-                          {forecast.suggestedStock || 0}
-                        </Badge>
-                      </td>
-                    </tr>
+                      </TableCell>
+                      <TableCell>{forecast.p50 || 0}</TableCell>
+                      <TableCell>{forecast.suggestedStock || 0}</TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>

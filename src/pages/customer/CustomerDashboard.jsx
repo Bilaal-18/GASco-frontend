@@ -3,9 +3,18 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchCustomerDashboard } from "@/store/slices/customer/customerDashboardSlice";
 import { fetchCustomerBookings } from "@/store/slices/customer/customerBookingsSlice";
 import CustomerSidebar from "@/components/layout/CustomerSidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import CustomerChatbot from "@/components/customer/CustomerChatbot";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ShoppingCart, Package, CheckCircle2, Clock, DollarSign, Loader2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Loader2 } from "lucide-react";
 
 export default function CustomerDashboard() {
   const dispatch = useDispatch();
@@ -19,142 +28,112 @@ export default function CustomerDashboard() {
 
   if (loading) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <CustomerSidebar />
-        <div className="flex-1 ml-64 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-600" />
-            <p className="text-gray-600">Loading dashboard...</p>
+        <SidebarInset>
+          <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
           </div>
-        </div>
-      </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   if (error) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <CustomerSidebar />
-        <div className="flex-1 ml-64 flex items-center justify-center">
-          <Card className="p-8">
-            <p className="text-red-600">Error: {error}</p>
-          </Card>
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-red-600">Error: {error}</div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
-  const stats = [
-    {
-      label: "Total Bookings",
-      value: summary.totalBookings,
-      icon: ShoppingCart,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-    },
-    {
-      label: "Active Bookings",
-      value: summary.activeBookings,
-      icon: Clock,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
-    },
-    {
-      label: "Completed",
-      value: summary.completedBookings,
-      icon: CheckCircle2,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-    },
-    {
-      label: "Pending",
-      value: summary.pendingBookings,
-      icon: Package,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-    },
-    {
-      label: "Total Spent",
-      value: `₹${summary.totalSpent.toLocaleString()}`,
-      icon: DollarSign,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-    },
-  ];
 
   const recentBookings = bookings.slice(0, 5);
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <SidebarProvider>
       <CustomerSidebar />
-      <div className="flex-1 ml-64 p-8">
+      <SidebarInset>
+        <div className="p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Customer Dashboard</h1>
-          <p className="text-gray-600">Overview of your bookings and statistics</p>
+          <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
         </div>
 
-      
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
-          {stats.map((stat, idx) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={idx} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className={`w-12 h-12 ${stat.bgColor} rounded-lg flex items-center justify-center mb-2`}>
-                    <Icon className={`w-6 h-6 ${stat.color}`} />
-                  </div>
-                  <CardTitle className="text-sm font-medium text-gray-600">{stat.label}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                </CardContent>
-              </Card>
-            );
-          })}
+        <div className="grid grid-cols-5 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-sm">Total Bookings</div>
+              <div className="text-2xl font-bold">{summary.totalBookings || 0}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-sm">Active Bookings</div>
+              <div className="text-2xl font-bold">{summary.activeBookings || 0}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-sm">Completed</div>
+              <div className="text-2xl font-bold">{summary.completedBookings || 0}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-sm">Pending</div>
+              <div className="text-2xl font-bold">{summary.pendingBookings || 0}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-sm">Total Spent</div>
+              <div className="text-2xl font-bold">₹{summary.totalSpent?.toLocaleString() || 0}</div>
+            </CardContent>
+          </Card>
         </div>
 
-    
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Bookings</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
+            <div className="mb-4 font-semibold">Recent Bookings</div>
             {recentBookings.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No bookings yet</p>
+              <div className="text-center py-8">No bookings yet</div>
             ) : (
-              <div className="space-y-4">
-                {recentBookings.map((booking) => (
-                  <div
-                    key={booking._id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                  >
-                    <div>
-                      <p className="font-semibold">Booking #{booking._id?.slice(-8)}</p>
-                      <p className="text-sm text-gray-600">
-                        {booking.cylinder?.cylinderName || "Gas Cylinder"} - Qty: {booking.quantity}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(booking.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          booking.status === "delivered" || booking.status === "completed"
-                            ? "bg-green-100 text-green-800"
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Booking ID</TableHead>
+                      <TableHead>Cylinder</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentBookings.map((booking) => (
+                      <TableRow key={booking._id}>
+                        <TableCell>{booking._id?.slice(-8) || "N/A"}</TableCell>
+                        <TableCell>{booking.cylinder?.cylinderName || booking.cylinder?.cylinderType || "N/A"}</TableCell>
+                        <TableCell>{booking.quantity || 0}</TableCell>
+                        <TableCell>₹{((booking.quantity || 0) * (booking.cylinder?.price || 0)).toLocaleString()}</TableCell>
+                        <TableCell>
+                          {booking.status === "delivered" || booking.status === "completed"
+                            ? "Completed"
                             : booking.status === "pending" || booking.status === "requested"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-blue-100 text-blue-800"
-                        }`}
-                      >
-                        {booking.status || "Pending"}
-                      </span>
-                      <p className="text-sm font-semibold mt-1">
-                        ₹{((booking.quantity || 0) * (booking.cylinder?.price || 0)).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                            ? "Pending"
+                            : booking.status || "Pending"}
+                        </TableCell>
+                        <TableCell>{new Date(booking.createdAt).toLocaleDateString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
@@ -162,7 +141,8 @@ export default function CustomerDashboard() {
 
     
         <CustomerChatbot bookings={bookings} summary={summary} />
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

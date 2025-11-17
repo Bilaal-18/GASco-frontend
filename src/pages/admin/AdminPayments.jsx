@@ -1,52 +1,20 @@
-// ============================================
-// FRONTEND: Admin Payments Page Component
-// ============================================
-// This component displays all payments received from agents and calculates pending amounts
-// It shows two tabs: "Payments Received" and "Pending Amounts"
-
-// Import React hooks - useState manages component state, useEffect runs side effects
 import { useEffect, useState } from "react";
-
-// Import Sidebar component - navigation menu for admin panel
 import Sidebar from "@/components/layout/SideBar";
-
-// Import UI components from shadcn/ui library - these are reusable UI elements
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"; // Card container for displaying content
-import { Badge } from "@/components/ui/badge"; // Badge component for showing status labels
-import { Button } from "@/components/ui/button"; // Button component for actions
-import { Input } from "@/components/ui/input"; // Input field for search functionality
-import { Label } from "@/components/ui/label"; // Label component for form fields
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"; // Dialog component for modals
-
-// Import icons from lucide-react library - these are visual icons for the UI
-import {
-  Wallet,        // Wallet icon - represents payments/money
-  DollarSign,    // Dollar sign icon - represents cash payments
-  Calendar,      // Calendar icon - represents dates
-  User,          // User icon - represents agent information
-  Package,       // Package icon - represents stock/items
-  CreditCard,    // Credit card icon - represents online payments
-  Loader2,       // Loading spinner icon - shows when data is being fetched
-  Search,        // Search icon - for search input field
-  Filter,        // Filter icon - for filtering options
-  CheckCircle2,  // Check circle icon - represents completed status
-  Clock,         // Clock icon - represents pending status
-  TrendingUp,    // Trending up icon - shows positive trends
-  TrendingDown,  // Trending down icon - shows negative trends
-  AlertCircle,   // Alert circle icon - shows warnings or empty states
-} from "lucide-react";
-
-// Import axios - HTTP client for making API requests to backend
+} from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Loader2 } from "lucide-react";
 import axios from "@/config/config";
-
-// Import toast - notification library to show success/error messages to users
 import { toast } from "sonner";
 
 // Main component function - this is the AdminPayments page component
@@ -506,484 +474,255 @@ export default function AdminPayments() {
     });
   };
 
-  // ============================================
-  // FUNCTION: Get Payment Method Badge Component
-  // ============================================
-  // Returns a colored badge showing payment method (Online or Cash)
-  const getMethodBadge = (method) => {
-    // If payment method is razorpay or online, show purple "Online" badge
-    if (method === "razorpay" || method === "online") {
-      return (
-        <Badge className="bg-purple-500 text-white">
-          <CreditCard className="w-3 h-3 mr-1" /> {/* Credit card icon */}
-          Online {/* Badge text */}
-        </Badge>
-      );
-    }
-    // Otherwise, show gray "Cash" badge
-    return (
-      <Badge className="bg-gray-500 text-white">
-        <DollarSign className="w-3 h-3 mr-1" /> {/* Dollar sign icon */}
-        Cash {/* Badge text */}
-      </Badge>
-    );
+  const getMethodText = (method) => {
+    return method === "razorpay" || method === "online" ? "Online" : "Cash";
   };
 
-  // ============================================
-  // FUNCTION: Get Payment Status Badge Component
-  // ============================================
-  // Returns a colored badge showing payment status (Completed or Pending)
-  const getStatusBadge = (status) => {
-    // If status is completed or paid, show green "Completed" badge
-    if (status === "completed" || status === "paid") {
-      return (
-        <Badge className="bg-green-500 text-white">
-          <CheckCircle2 className="w-3 h-3 mr-1" /> {/* Check circle icon */}
-          Completed {/* Badge text */}
-        </Badge>
-      );
-    }
-    // Otherwise, show yellow "Pending" badge
-    return (
-      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-        <Clock className="w-3 h-3 mr-1" /> {/* Clock icon */}
-        Pending {/* Badge text */}
-      </Badge>
-    );
+  const getStatusText = (status) => {
+    return status === "completed" || status === "paid" ? "Completed" : "Pending";
   };
 
-  // ============================================
-  // LOADING STATE - Show Spinner While Data Loads
-  // ============================================
-  // If data is still loading, show loading spinner instead of content
+  const getStatusColor = (status) => {
+    return status === "completed" || status === "paid" ? "text-green-600" : "text-yellow-600";
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Sidebar /> {/* Show sidebar navigation */}
-        <div className="ml-64 max-w-[calc(100%-16rem)] flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" /> {/* Spinning loader icon */}
-        </div>
-      </div>
+      <SidebarProvider>
+        <Sidebar />
+        <SidebarInset>
+          <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
-  // ============================================
-  // MAIN RENDER - Display the Page Content
-  // ============================================
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar navigation menu */}
+    <SidebarProvider>
       <Sidebar />
-      
-      {/* Main content area */}
-      <div className="p-8 ml-64 max-w-[calc(100%-16rem)]">
-        {/* ============================================
-            Page Header Section
-            ============================================ */}
-        <div className="mb-8">
-          {/* Page title with wallet icon */}
-          <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-            <Wallet className="w-8 h-8 text-blue-600" /> {/* Wallet icon */}
-            Agent Payments & Pending Amounts {/* Page title */}
-          </h1>
-          {/* Page description */}
-          <p className="text-gray-600">View payments received and pending amounts from agents</p>
+      <SidebarInset>
+        <div className="p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-4">Agent Payments</h1>
         </div>
 
-        {/* ============================================
-            Tab Navigation - Switch Between Views
-            ============================================ */}
         <div className="flex gap-2 mb-6 border-b">
-          {/* Payments Received Tab Button */}
           <button
-            onClick={() => setActiveTab("payments")} // When clicked, switch to payments tab
-            className={`px-4 py-2 font-medium transition-colors ${
+            onClick={() => setActiveTab("payments")}
+            className={`px-4 py-2 font-medium ${
               activeTab === "payments"
-                ? "border-b-2 border-blue-600 text-blue-600" // Active tab styling (blue)
-                : "text-gray-500 hover:text-gray-700"        // Inactive tab styling (gray)
+                ? "border-b-2 border-blue-600 text-blue-600"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            Payments Received {/* Tab label */}
+            Payments Received
           </button>
-          
-          {/* Pending Amounts Tab Button */}
           <button
-            onClick={() => setActiveTab("pending")} // When clicked, switch to pending tab
-            className={`px-4 py-2 font-medium transition-colors ${
+            onClick={() => setActiveTab("pending")}
+            className={`px-4 py-2 font-medium ${
               activeTab === "pending"
-                ? "border-b-2 border-orange-600 text-orange-600" // Active tab styling (orange)
-                : "text-gray-500 hover:text-gray-700"           // Inactive tab styling (gray)
+                ? "border-b-2 border-orange-600 text-orange-600"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            Pending Amounts {/* Tab label */}
+            Pending Amounts
           </button>
         </div>
 
-        {/* ============================================
-            Statistics Cards - Show Key Metrics
-            ============================================ */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
-          {/* Card 1: Total Payments Count */}
+        <div className="grid grid-cols-5 gap-4 mb-6">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-blue-600">{stats.totalCount}</p> {/* Display total count */}
+            <CardContent className="p-4">
+              <div className="text-sm">Total Payments</div>
+              <div className="text-2xl font-bold">{stats.totalCount}</div>
             </CardContent>
           </Card>
-          
-          {/* Card 2: Total Amount Received */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Amount</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-500" /> {/* Upward trend icon */}
-                <p className="text-3xl font-bold text-green-600">₹{stats.totalAmount.toLocaleString()}</p> {/* Display total amount with formatting */}
-              </div>
+            <CardContent className="p-4">
+              <div className="text-sm">Total Amount</div>
+              <div className="text-2xl font-bold text-green-600">₹{stats.totalAmount.toLocaleString()}</div>
             </CardContent>
           </Card>
-          
-          {/* Card 3: Online Payments Count */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Online Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-purple-600">{stats.onlinePayments}</p> {/* Display online count */}
+            <CardContent className="p-4">
+              <div className="text-sm">Online Payments</div>
+              <div className="text-2xl font-bold">{stats.onlinePayments}</div>
             </CardContent>
           </Card>
-          
-          {/* Card 4: Cash Payments Count */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Cash Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-gray-600">{stats.cashPayments}</p> {/* Display cash count */}
+            <CardContent className="p-4">
+              <div className="text-sm">Cash Payments</div>
+              <div className="text-2xl font-bold">{stats.cashPayments}</div>
             </CardContent>
           </Card>
-          
-          {/* Card 5: Total Pending Amount */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Pending</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-orange-500" /> {/* Downward trend icon */}
-                <p className="text-3xl font-bold text-orange-600">₹{stats.totalPending.toLocaleString()}</p> {/* Display pending amount */}
-              </div>
+            <CardContent className="p-4">
+              <div className="text-sm">Total Pending</div>
+              <div className="text-2xl font-bold text-orange-600">₹{stats.totalPending.toLocaleString()}</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* ============================================
-            Payments Received Tab Content
-            ============================================ */}
         {activeTab === "payments" && (
           <>
-            {/* ============================================
-                Search and Filter Section
-                ============================================ */}
-            <Card className="mb-6">
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Search Input Field */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" /> {/* Search icon */}
-                    <Input
-                      placeholder="Search by agent name, transaction ID..." // Placeholder text
-                      value={search} // Current search value
-                      onChange={(e) => setSearch(e.target.value)} // Update search state when user types
-                      className="pl-10" // Add left padding for icon
-                    />
-                  </div>
-                  
-                  {/* Payment Method Filter Dropdown */}
-                  <div className="flex items-center gap-2">
-                    <Filter className="w-4 h-4 text-gray-400" /> {/* Filter icon */}
-                    <select
-                      value={methodFilter} // Current selected filter
-                      onChange={(e) => setMethodFilter(e.target.value)} // Update filter when user selects option
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="all">All Payment Methods</option> {/* Show all methods */}
-                      <option value="online">Online</option> {/* Show only online */}
-                      <option value="cash">Cash</option> {/* Show only cash */}
-                    </select>
-                  </div>
-                  
-                  {/* Results Count Display */}
-                  <div className="text-sm text-gray-500 flex items-center">
-                    Showing {filteredPayments.length} of {agentPayments.length} payments {/* Show count of filtered vs total */}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="mb-6 flex gap-2">
+              <Input
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="flex-1"
+              />
+              <select
+                value={methodFilter}
+                onChange={(e) => setMethodFilter(e.target.value)}
+                className="px-3 py-2 border rounded"
+              >
+                <option value="all">All Methods</option>
+                <option value="online">Online</option>
+                <option value="cash">Cash</option>
+              </select>
+            </div>
 
-            {/* ============================================
-                Payments List Display
-                ============================================ */}
-            {/* If no payments found after filtering */}
             {filteredPayments.length === 0 ? (
               <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-12">
-                    <Wallet className="w-16 h-16 text-gray-300 mx-auto mb-4" /> {/* Empty state icon */}
-                    <p className="text-gray-500 text-lg">
-                      {/* Show different message based on whether filters are applied */}
-                      {search || methodFilter !== "all"
-                        ? "No payments found matching your filters." // If filters applied
-                        : "No payments received yet."} {/* If no filters */}
-                    </p>
-                  </div>
+                <CardContent className="p-8 text-center">
+                  <p className="text-gray-500">
+                    {search || methodFilter !== "all"
+                      ? "No payments found matching your filters."
+                      : "No payments received yet."}
+                  </p>
                 </CardContent>
               </Card>
             ) : (
-              /* If payments exist, display them in a grid */
-              <div className="grid grid-cols-1 gap-6">
-                {/* Map through each filtered payment and create a card */}
-                {filteredPayments.map((payment) => (
-                  <Card key={payment._id} className="hover:shadow-lg transition-shadow">
-                    {/* Payment Card Header */}
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          {/* Payment ID and Badges */}
-                          <div className="flex items-center gap-3 mb-2 flex-wrap">
-                            <CardTitle className="text-xl">
-                              Payment #{payment.transactionID?.slice(-8) || payment._id.slice(-8)} {/* Show last 8 chars of transaction ID */}
-                            </CardTitle>
-                            {getMethodBadge(payment.method)} {/* Show payment method badge */}
-                            {getStatusBadge(payment.status)} {/* Show payment status badge */}
-                          </div>
-                          {/* Payment Date */}
-                          <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" /> {/* Calendar icon */}
-                              {formatDate(payment.paymentDate || payment.createdAt)} {/* Formatted date */}
-                            </span>
-                          </div>
-                        </div>
-                        {/* Payment Amount (Right Side) */}
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-green-600">
-                            ₹{payment.amount?.toLocaleString() || 0} {/* Display amount with formatting */}
-                          </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    
-                    {/* Payment Card Content - Details */}
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Left Column: Agent Details */}
-                        <div className="space-y-3">
-                          <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                            <User className="w-4 h-4" /> {/* User icon */}
-                            Agent Details {/* Section title */}
-                          </h3>
-                          <div className="text-sm space-y-1 text-gray-600">
-                            {/* Agent Name */}
-                            <p>
-                              <strong>Name:</strong> {payment.agent?.agentname || payment.agent?.username || "N/A"}
-                            </p>
-                            {/* Agent Email */}
-                            <p>
-                              <strong>Email:</strong> {payment.agent?.email || "N/A"}
-                            </p>
-                            {/* Agent Phone */}
-                            <p>
-                              <strong>Phone:</strong> {payment.agent?.phoneNo || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Right Column: Payment & Transaction Details */}
-                        <div className="space-y-3">
-                          <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                            <Package className="w-4 h-4" /> {/* Package icon */}
-                            Payment & Transaction {/* Section title */}
-                          </h3>
-                          <div className="text-sm space-y-1 text-gray-600">
-                            {/* Description (if exists) */}
-                            {payment.description && (
-                              <p>
-                                <strong>Description:</strong> {payment.description}
-                              </p>
-                            )}
-                            {/* Notes (if exists) */}
-                            {payment.notes && (
-                              <p>
-                                <strong>Notes:</strong> {payment.notes}
-                              </p>
-                            )}
-                            {/* Razorpay Order ID (if exists) */}
-                            {payment.razorpayOrderId && (
-                              <p>
-                                <strong>Razorpay Order:</strong> {payment.razorpayOrderId}
-                              </p>
-                            )}
-                            {/* Razorpay Payment ID (if exists) */}
-                            {payment.razorpayPaymentId && (
-                              <p>
-                                <strong>Razorpay Payment:</strong> {payment.razorpayPaymentId}
-                              </p>
-                            )}
-                            {/* Transaction ID (if exists) */}
-                            {payment.transactionID && (
-                              <p>
-                                <strong>Transaction ID:</strong> {payment.transactionID}
-                              </p>
-                            )}
-                            {/* Stock Items Count (if exists) */}
-                            {payment.stockIds && payment.stockIds.length > 0 && (
-                              <p>
-                                <strong>Stock Items Paid:</strong> {payment.stockIds.length} item(s)
-                              </p>
-                            )}
-                            {/* Partial Payment Details */}
-                            {payment.status === "partial" && payment.method === "online" && (
-                              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                                <p className="font-semibold text-yellow-800 mb-2">Partial Payment Details</p>
-                                <p className="text-sm">
-                                  <strong>Online Paid:</strong> ₹{(payment.onlinePaid || 0).toLocaleString()}
-                                </p>
-                                <p className="text-sm">
-                                  <strong>Cash Paid:</strong> ₹{(payment.cashPaid || 0).toLocaleString()}
-                                </p>
-                                <p className="text-sm">
-                                  <strong>Total Due:</strong> ₹{(payment.totalDue || 0).toLocaleString()}
-                                </p>
-                                <p className="text-sm">
-                                  <strong>Remaining Cash:</strong> ₹{(payment.remainingCash || 0).toLocaleString()}
-                                </p>
-                                <Button
-                                  onClick={() => {
-                                    setSelectedPayment(payment);
-                                    setCashPaidAmount((payment.cashPaid || 0).toString());
-                                    setCashPaymentDialogOpen(true);
-                                  }}
-                                  className="mt-2 bg-blue-600 hover:bg-blue-700 text-white text-sm"
-                                  size="sm"
-                                >
-                                  <DollarSign className="w-3 h-3 mr-1" />
-                                  Update Cash Paid
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Transaction ID</TableHead>
+                      <TableHead>Agent</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPayments.map((payment) => (
+                      <TableRow key={payment._id}>
+                        <TableCell>
+                          {payment.transactionID?.slice(-8) || payment._id.slice(-8)}
+                        </TableCell>
+                        <TableCell>
+                          {payment.agent?.agentname || payment.agent?.username || "N/A"}
+                        </TableCell>
+                        <TableCell className="font-semibold text-green-600">
+                          ₹{payment.amount?.toLocaleString() || 0}
+                        </TableCell>
+                        <TableCell>{getMethodText(payment.method)}</TableCell>
+                        <TableCell>
+                          <span className={getStatusColor(payment.status)}>
+                            {getStatusText(payment.status)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(payment.paymentDate || payment.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          {payment.status === "partial" && payment.method === "online" && (
+                            <Button
+                              onClick={() => {
+                                setSelectedPayment(payment);
+                                setCashPaidAmount((payment.cashPaid || 0).toString());
+                                setCashPaymentDialogOpen(true);
+                              }}
+                              variant="outline"
+                              size="sm"
+                            >
+                              Update Cash
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </>
         )}
 
-        {/* ============================================
-            Pending Amounts Tab Content
-            ============================================ */}
         {activeTab === "pending" && (
           <Card>
-            <CardHeader>
-              <CardTitle>Pending Amounts by Agent</CardTitle> {/* Table title */}
-            </CardHeader>
-            <CardContent>
-              {/* If no pending amounts found */}
+            <CardContent className="p-4">
               {agentPendingAmounts.length === 0 ? (
                 <div className="text-center py-12">
-                  <AlertCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" /> {/* Empty state icon */}
-                  <p className="text-gray-500 text-lg">No pending amounts found</p>
+                  <p className="text-gray-500">No pending amounts found</p>
                 </div>
               ) : (
-                /* If pending amounts exist, display in table */
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    {/* Table Header */}
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="p-3 text-left">Agent Name</th>
-                        <th className="p-3 text-left">Email</th>
-                        <th className="p-3 text-left">Phone</th>
-                        <th className="p-3 text-right">Total Stock Amount</th>
-                        <th className="p-3 text-right">Total Paid</th>
-                        <th className="p-3 text-right">Pending Amount</th>
-                      </tr>
-                    </thead>
-                    {/* Table Body */}
-                    <tbody>
-                      {/* Sort by pending amount (highest first) and map through each agent */}
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Agent Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Total Stock Amount</TableHead>
+                        <TableHead>Total Paid</TableHead>
+                        <TableHead>Pending Amount</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {agentPendingAmounts
-                        .sort((a, b) => b.pendingAmount - a.pendingAmount) // Sort descending by pending amount
+                        .sort((a, b) => b.pendingAmount - a.pendingAmount)
                         .map((agent) => (
-                          <tr key={agent.agentId} className="border-t hover:bg-gray-50">
-                            {/* Agent Name */}
-                            <td className="p-3 font-medium">{agent.agentName}</td>
-                            {/* Agent Email */}
-                            <td className="p-3 text-gray-600">{agent.email}</td>
-                            {/* Agent Phone */}
-                            <td className="p-3 text-gray-600">{agent.phoneNo}</td>
-                            {/* Total Stock Amount */}
-                            <td className="p-3 text-right">
+                          <TableRow key={agent.agentId}>
+                            <TableCell className="font-medium">{agent.agentName}</TableCell>
+                            <TableCell>{agent.email}</TableCell>
+                            <TableCell>{agent.phoneNo}</TableCell>
+                            <TableCell className="text-right">
                               ₹{agent.totalStockAmount.toLocaleString()}
-                            </td>
-                            {/* Total Paid Amount (green color) */}
-                            <td className="p-3 text-right text-green-600">
+                            </TableCell>
+                            <TableCell className="text-right text-green-600">
                               ₹{agent.totalPaid.toLocaleString()}
-                            </td>
-                            {/* Pending Amount with Badge and Action Button */}
-                            <td className="p-3 text-right">
-                              <div className="flex items-center justify-end gap-2 flex-wrap">
-                                {agent.pendingAmount > 0 ? (
-                                  <>
-                                    <Badge className="bg-orange-500 text-white text-base px-3 py-1">
-                                      ₹{agent.pendingAmount.toLocaleString()}
-                                    </Badge>
-                                    <Button
-                                      onClick={() => {
-                                        setSelectedAgent(agent);
-                                        setNewCashAmount("");
-                                        setNewCashDescription("");
-                                        setNewCashPaymentDialogOpen(true);
-                                      }}
-                                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1"
-                                      size="sm"
-                                    >
-                                      <DollarSign className="w-3 h-3 mr-1" />
-                                      Add Cash
-                                    </Button>
-                                  </>
-                                ) : (
-                                  <Badge className="bg-green-500 text-white text-base px-3 py-1">
-                                    ₹0
-                                  </Badge>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={agent.pendingAmount > 0 ? "text-orange-600 font-semibold" : "text-green-600"}>
+                                ₹{agent.pendingAmount.toLocaleString()}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {agent.pendingAmount > 0 && (
+                                <Button
+                                  onClick={() => {
+                                    setSelectedAgent(agent);
+                                    setNewCashAmount("");
+                                    setNewCashDescription("");
+                                    setNewCashPaymentDialogOpen(true);
+                                  }}
+                                  variant="outline"
+                                  size="sm"
+                                >
+                                  Add Cash
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
                         ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
           </Card>
         )}
 
-        {/* New Cash Payment Dialog (for creating new cash payments) */}
         <Dialog open={newCashPaymentDialogOpen} onOpenChange={setNewCashPaymentDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Record Cash Payment</DialogTitle>
-              <DialogDescription>
-                Record a cash payment received from the agent.
-              </DialogDescription>
             </DialogHeader>
             {selectedAgent && (
               <div className="space-y-4">
@@ -991,31 +730,26 @@ export default function AdminPayments() {
                   <p><strong>Agent:</strong> {selectedAgent.agentName}</p>
                   <p><strong>Pending Amount:</strong> ₹{selectedAgent.pendingAmount.toLocaleString()}</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newCashAmount">Cash Amount (₹)</Label>
+                <div>
+                  <Label>Amount</Label>
                   <Input
-                    id="newCashAmount"
                     type="number"
                     step="0.01"
                     min="0"
                     max={selectedAgent.pendingAmount}
                     value={newCashAmount}
                     onChange={(e) => setNewCashAmount(e.target.value)}
-                    placeholder="Enter cash amount"
+                    placeholder="Amount"
                     required
                   />
-                  <p className="text-xs text-gray-500">
-                    Maximum: ₹{selectedAgent.pendingAmount.toLocaleString()}
-                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newCashDescription">Description (Optional)</Label>
+                <div>
+                  <Label>Description</Label>
                   <Input
-                    id="newCashDescription"
                     type="text"
                     value={newCashDescription}
                     onChange={(e) => setNewCashDescription(e.target.value)}
-                    placeholder="Payment description"
+                    placeholder="Description"
                   />
                 </div>
                 <DialogFooter>
@@ -1074,10 +808,7 @@ export default function AdminPayments() {
                         Recording...
                       </>
                     ) : (
-                      <>
-                        <DollarSign className="w-4 h-4 mr-2" />
-                        Record Payment
-                      </>
+                      "Record Payment"
                     )}
                   </Button>
                 </DialogFooter>
@@ -1086,38 +817,30 @@ export default function AdminPayments() {
           </DialogContent>
         </Dialog>
 
-        {/* Cash Payment Dialog (for updating partial payments) */}
         <Dialog open={cashPaymentDialogOpen} onOpenChange={setCashPaymentDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Update Cash Paid Amount</DialogTitle>
-              <DialogDescription>
-                Enter the cash amount received from the agent for this partial payment.
-              </DialogDescription>
+              <DialogTitle>Update Cash Paid</DialogTitle>
             </DialogHeader>
             {selectedPayment && (
               <div className="space-y-4">
                 <div className="p-3 bg-gray-50 rounded space-y-1 text-sm">
-                  <p><strong>Online Paid:</strong> ₹{(selectedPayment.onlinePaid || 0).toLocaleString()}</p>
-                  <p><strong>Total Due:</strong> ₹{(selectedPayment.totalDue || 0).toLocaleString()}</p>
-                  <p><strong>Remaining Cash:</strong> ₹{((selectedPayment.totalDue || 0) - (selectedPayment.onlinePaid || 0)).toLocaleString()}</p>
+                  <div>Online Paid: ₹{(selectedPayment.onlinePaid || 0).toLocaleString()}</div>
+                  <div>Total Due: ₹{(selectedPayment.totalDue || 0).toLocaleString()}</div>
+                  <div className="font-semibold">Remaining Cash: ₹{((selectedPayment.totalDue || 0) - (selectedPayment.onlinePaid || 0)).toLocaleString()}</div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cashPaid">Cash Paid Amount (₹)</Label>
+                <div>
+                  <Label>Cash Paid Amount</Label>
                   <Input
-                    id="cashPaid"
                     type="number"
                     step="0.01"
                     min="0"
                     max={(selectedPayment.totalDue || 0) - (selectedPayment.onlinePaid || 0)}
                     value={cashPaidAmount}
                     onChange={(e) => setCashPaidAmount(e.target.value)}
-                    placeholder="Enter cash paid amount"
+                    placeholder="Amount"
                     required
                   />
-                  <p className="text-xs text-gray-500">
-                    Maximum: ₹{((selectedPayment.totalDue || 0) - (selectedPayment.onlinePaid || 0)).toLocaleString()}
-                  </p>
                 </div>
                 <DialogFooter>
                   <Button
@@ -1136,7 +859,6 @@ export default function AdminPayments() {
                     type="button"
                     onClick={handleUpdateCashPaid}
                     disabled={updatingCashPaid}
-                    className="bg-blue-600 hover:bg-blue-700"
                   >
                     {updatingCashPaid ? (
                       <>
@@ -1144,10 +866,7 @@ export default function AdminPayments() {
                         Updating...
                       </>
                     ) : (
-                      <>
-                        <DollarSign className="w-4 h-4 mr-2" />
-                        Update Cash Paid
-                      </>
+                      "Update"
                     )}
                   </Button>
                 </DialogFooter>
@@ -1155,7 +874,8 @@ export default function AdminPayments() {
             )}
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

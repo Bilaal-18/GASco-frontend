@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import axios from "@/config/config";
 import Sidebar from "@/components/layout/SideBar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +32,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { RefreshCcw } from "lucide-react";
 
 export default function ManageStocks() {
   const [stocks, setStocks] = useState([]);
@@ -135,24 +141,24 @@ export default function ManageStocks() {
   };
 
   return (
-    <div>
+    <SidebarProvider>
       <Sidebar />
 
-      <div className="p-6 bg-gray-50 min-h-screen ml-64 max-w-[calc(100%-16rem)]">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-          <h1 className="text-2xl font-bold text-gray-800">Manage Stock</h1>
-
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => {
-                fetchStocks();
-                fetchCylinders();
-              }}
-              className="flex items-center gap-2"
-            >
-              <RefreshCcw size={16} /> Refresh
-            </Button>
+      <SidebarInset>
+        <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-4">Manage Stock</h1>
+        </div>
+        <div className="flex justify-between items-center mb-6">
+          <Button
+            variant="outline"
+            onClick={() => {
+              fetchStocks();
+              fetchCylinders();
+            }}
+          >
+            Refresh
+          </Button>
 
             <Dialog
               open={open}
@@ -222,53 +228,61 @@ export default function ManageStocks() {
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
         </div>
 
         {loading ? (
-          <p className="text-gray-600">Loading stocks...</p>
+          <p className="text-gray-600">Loading...</p>
         ) : stocks.length === 0 ? (
           <p className="text-gray-600">No stock data available.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {stocks.map((item) => (
-              <Card
-                key={item._id}
-                className="bg-white border border-gray-200 shadow-md hover:shadow-lg transition-all duration-300 p-4"
-              >
-                <CardHeader>
-                  <CardTitle className="text-xl font-semibold text-gray-800">
-                    {item.cylinderId?.cylinderName || "Unnamed Cylinder"}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-gray-700 space-y-1">
-                  <p><strong>Type:</strong> {item.cylinderId?.cylinderType}</p>
-                  <p><strong>Weight:</strong> {item.cylinderId?.weight} kg</p>
-                  <p><strong>Price:</strong> ₹{item.cylinderId?.price}</p>
-                  <p><strong>Quantity:</strong> {item.totalQuantity}</p>
-
-                  <div className="flex gap-3 mt-5 justify-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditDialog(item)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(item._id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cylinder Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Weight</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {stocks.map((item) => (
+                  <TableRow key={item._id}>
+                    <TableCell className="font-medium">
+                      {item.cylinderId?.cylinderName || "Unnamed Cylinder"}
+                    </TableCell>
+                    <TableCell>{item.cylinderId?.cylinderType}</TableCell>
+                    <TableCell>{item.cylinderId?.weight} kg</TableCell>
+                    <TableCell>₹{item.cylinderId?.price}</TableCell>
+                    <TableCell>{item.totalQuantity}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(item)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(item._id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

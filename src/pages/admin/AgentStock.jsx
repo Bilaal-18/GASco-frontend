@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "@/config/config";
 import Sidebar from "@/components/layout/SideBar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import {
   Card,
   CardHeader,
@@ -44,7 +45,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner";
-import { Edit, Trash2, Plus, FileDown, Receipt, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -306,24 +307,19 @@ const AgentStock = () => {
   );
 
   return (
-    <div>
+    <SidebarProvider>
       <Sidebar />
-      <div className="p-6 flex flex-col gap-6 ml-64 max-w-[calc(100%-16rem)]">
+      <SidebarInset>
+        <div className="p-6 flex flex-col gap-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Agent Stock Management</h2>
           <div className="flex items-center gap-3">
-            
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search by agent, cylinder, weight, price..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 w-64"
-              />
-            </div>
-            
-            
+            <Input
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-64"
+            />
             <Select onValueChange={handleAgentSelect} value={selectedAgent}>
               <SelectTrigger className="w-52">
                 <SelectValue placeholder="Filter by Agent" />
@@ -338,19 +334,18 @@ const AgentStock = () => {
               </SelectContent>
             </Select>
 
-            <Button onClick={generateReport} variant="outline" className="flex items-center gap-2">
-              <FileDown size={16} /> Full Report
+            <Button onClick={generateReport} variant="outline">
+              Full Report
             </Button>
 
-            <Button onClick={generateAgentBill} className="flex items-center gap-2">
-              <Receipt size={16} /> Generate Bill
+            <Button onClick={generateAgentBill}>
+              Generate Bill
             </Button>
 
-            
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Plus size={16} /> {editingStock ? "Edit Stock" : "Add Stock"}
+                <Button>
+                  {editingStock ? "Edit Stock" : "Add Stock"}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
@@ -480,14 +475,14 @@ const AgentStock = () => {
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
-                            size="icon"
+                            size="sm"
                             onClick={() => handleEditClick(stock)}
                           >
-                            <Edit size={16} />
+                            Edit
                           </Button>
                           <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon"><Trash2 size={16} /></Button>
+                            <Button variant="destructive" size="sm">Delete</Button>
                             </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
@@ -560,8 +555,9 @@ const AgentStock = () => {
             </h3>
           </Card>
         </div>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 };
 

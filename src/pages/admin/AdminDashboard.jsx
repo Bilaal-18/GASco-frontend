@@ -3,19 +3,40 @@ import { useNavigate } from "react-router-dom";
 import axios from "@/config/config";
 import userContext from "@/context/UserContext";
 import Sidebar from "@/components/layout/SideBar";
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+// ShadCN chart helpers
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+
+// Recharts
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer
+} from "recharts";
+
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Users, UserCog, Package, Wallet, ArrowRight, AlertCircle, DollarSign, Loader2 } from "lucide-react";
+import { Cylinder, Loader2,UserCog,Users, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminDashboard() {
@@ -214,146 +235,200 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <SidebarProvider>
       <Sidebar />
+      <SidebarInset>
+        <div className="p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
+        </div>
 
-      <main className="p-8 ml-64 min-h-screen max-w-[calc(100%-16rem)]">
-        <h2 className="text-3xl font-semibold mb-6 text-slate-800 dark:text-slate-100">
-          Welcome, {user?.username || "Admin"}
-        </h2>
+        <div className="grid grid-cols-5 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-sm">
+                <UserCog className="h-4 w-4 text-black" />
+                <span>Total Agents</span>
+              </div>
+              <div className="text-2xl font-bold mt-1">{summary.agents}</div>
+            </CardContent>
+          </Card>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-sm">
+                <Users className="h-4 w-4 text-black" />
+                <span>Total Customers</span>
+              </div>
+              <div className="text-2xl font-bold">{summary.customers}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 ">
+                <Cylinder className="h-4 w-4 text-black"/>
+                <span>Total Stock</span>
+              </div>
+              <div className="text-2xl font-bold">{summary.stock}</div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate("/admin/payments")}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Wallet className="h-4 w-4"/>
+                <span>Payment Received</span>
+              </div>
+              
+              <div className="text-2xl font-bold">₹{summary.paymentsReceived.toLocaleString()}</div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate("/admin/payments")}
+          >
+            <CardContent className="p-4">
+              <div className="text-sm">Pending Amount</div>
+              <div className="text-2xl font-bold">₹{summary.pendingAmount.toLocaleString()}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-3 gap-6 mt-8">
+
         
-          <Card className="shadow-md border-slate-200 dark:border-slate-700">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Total Agents</CardTitle>
-              <UserCog className="text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold text-slate-800 dark:text-white">
-                {summary.agents}
-              </p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardContent className="p-4">
+            <h2 className="font-semibold mb-4">Users Overview</h2>
 
-          <Card className="shadow-md border-slate-200 dark:border-slate-700">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Total Customers</CardTitle>
-              <Users className="text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold text-slate-800 dark:text-white">
-                {summary.customers}
-              </p>
-            </CardContent>
-          </Card>
+            <ChartContainer>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={[
+                  { name: "Agents", value: summary.agents },
+                  { name: "Customers", value: summary.customers }
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis allowDecimals={false} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[5, 5, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
-          <Card className="shadow-md border-slate-200 dark:border-slate-700">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Total Stock</CardTitle>
-              <Package className="text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-4xl font-bold text-slate-800 dark:text-white">
-                {summary.stock}
-              </p>
-            </CardContent>
-          </Card>
 
-          <Card 
-            className="shadow-md border-slate-200 dark:border-slate-700 cursor-pointer hover:shadow-lg transition-shadow hover:border-teal-400"
-            onClick={() => navigate("/admin/payments")}
-          >
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Payments Received</CardTitle>
-              <Wallet className="text-teal-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <p className="text-4xl font-bold text-slate-800 dark:text-white">
-                  ₹{summary.paymentsReceived.toLocaleString()}
-                </p>
-                <ArrowRight className="text-teal-500 w-5 h-5" />
-              </div>
-              <p className="text-sm text-slate-500 mt-2">Click to view details</p>
-            </CardContent>
-          </Card>
+        
+          <Card>
+          <CardContent className="p-4">
+            <h2 className="font-semibold mb-4">Payment Status</h2>
 
-          <Card 
-            className="shadow-md border-slate-200 dark:border-slate-700 cursor-pointer hover:shadow-lg transition-shadow hover:border-orange-400"
-            onClick={() => navigate("/admin/payments")}
-          >
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Pending Amount</CardTitle>
-              <AlertCircle className="text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <p className="text-4xl font-bold text-slate-800 dark:text-white">
-                  ₹{summary.pendingAmount.toLocaleString()}
-                </p>
-                <ArrowRight className="text-orange-500 w-5 h-5" />
-              </div>
-              <p className="text-sm text-slate-500 mt-2">Click to view details</p>
-            </CardContent>
-          </Card>
+            <ChartContainer>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: "Received", value: summary.paymentsReceived },
+                      { name: "Pending", value: summary.pendingAmount }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    label
+                    outerRadius={80}
+                    dataKey="value"
+                  >
+                    <Cell fill="#22c55e" />
+                    <Cell fill="#ef4444" />
+                  </Pie>
+
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+
+          <Card>
+          <CardContent className="p-4">
+            <h2 className="font-semibold mb-4">Stock Overview</h2>
+
+            <ChartContainer>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: "Available Stock", value: summary.stock },
+                      { name: "Sold", value: summary.stock === 0 ? 1 : summary.stock / 3 }
+                    ]}
+                    innerRadius={50}
+                    outerRadius={80}
+                    dataKey="value"
+                    label
+                  >
+                    <Cell fill="#0ea5e9" />
+                    <Cell fill="#9ca3af" />
+                  </Pie>
+
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
         </div>
 
-        {/* Quick Actions Section */}
-        <div className="mt-8">
-          <Card className="shadow-md border-slate-200 dark:border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-4">
-                <Button
-                  onClick={() => {
-                    setSelectedAgent(null);
-                    setCashAmount("");
-                    setCashDescription("");
-                    setCashPaymentDialogOpen(true);
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Record Cash Payment
-                </Button>
-                <Button
-                  onClick={() => navigate("/admin/payments")}
-                  variant="outline"
-                >
-                  <Wallet className="w-4 h-4 mr-2" />
-                  View All Payments
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Cash Payment Dialog */}
+        {/* <Card>
+          <CardContent className="p-4">
+            <div className="mb-4 font-semibold">Quick Actions</div>
+            <div className="flex gap-4">
+              <Button
+                onClick={() => {
+                  setSelectedAgent(null);
+                  setCashAmount("");
+                  setCashDescription("");
+                  setCashPaymentDialogOpen(true);
+                }}
+              >
+                Record Cash Payment
+              </Button>
+              <Button
+                onClick={() => navigate("/admin/payments")}
+                variant="outline"
+              >
+                View All Payments
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <Dialog open={cashPaymentDialogOpen} onOpenChange={setCashPaymentDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Record Cash Payment</DialogTitle>
-              <DialogDescription>
-                Record a cash payment received from an agent.
-              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="agentSelect">Select Agent</Label>
+              <div>
+                <Label>Agent</Label>
                 <select
-                  id="agentSelect"
                   value={selectedAgent?._id || selectedAgent?.agentId || ""}
                   onChange={(e) => {
                     const agent = agents.find(a => (a._id || a.agentId) === e.target.value);
                     setSelectedAgent(agent);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border rounded"
                   required
                 >
-                  <option value="">Select an agent...</option>
+                  <option value="">Select agent...</option>
                   {agents.map((agent) => (
                     <option key={agent._id || agent.agentId} value={agent._id || agent.agentId}>
                       {agent.agentname || agent.username || "Unknown Agent"}
@@ -361,27 +436,25 @@ export default function AdminDashboard() {
                   ))}
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="cashAmount">Cash Amount (₹)</Label>
+              <div>
+                <Label>Amount</Label>
                 <Input
-                  id="cashAmount"
                   type="number"
                   step="0.01"
                   min="0"
                   value={cashAmount}
                   onChange={(e) => setCashAmount(e.target.value)}
-                  placeholder="Enter cash amount"
+                  placeholder="Amount"
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="cashDescription">Description (Optional)</Label>
+              <div>
+                <Label>Description</Label>
                 <Input
-                  id="cashDescription"
                   type="text"
                   value={cashDescription}
                   onChange={(e) => setCashDescription(e.target.value)}
-                  placeholder="Payment description"
+                  placeholder="Description"
                 />
               </div>
               <DialogFooter>
@@ -402,7 +475,6 @@ export default function AdminDashboard() {
                   type="button"
                   onClick={handleRecordCashPayment}
                   disabled={recordingCashPayment || !selectedAgent || !cashAmount}
-                  className="bg-green-600 hover:bg-green-700"
                 >
                   {recordingCashPayment ? (
                     <>
@@ -410,17 +482,15 @@ export default function AdminDashboard() {
                       Recording...
                     </>
                   ) : (
-                    <>
-                      <DollarSign className="w-4 h-4 mr-2" />
-                      Record Payment
-                    </>
+                    "Record Payment"
                   )}
                 </Button>
               </DialogFooter>
             </div>
           </DialogContent>
-        </Dialog>
-      </main>
-    </div>
+        </Dialog> */}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

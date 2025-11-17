@@ -1,34 +1,28 @@
 import { useEffect, useState } from "react";
 import AgentSidebar from "@/components/layout/AgentSidebar";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Wallet,
-  DollarSign,
-  Calendar,
-  Package,
-  CreditCard,
-  Loader2,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  TrendingUp,
-  TrendingDown,
-} from "lucide-react";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Loader2 } from "lucide-react";
 import axios from "@/config/config";
 import { toast } from "sonner";
-import AgentPaymentButton from "@/components/AgentPaymentButton";
 
 export default function AgentPayments() {
   const [paymentHistory, setPaymentHistory] = useState([]);
@@ -48,7 +42,7 @@ export default function AgentPayments() {
     fetchPaymentHistory();
   }, [token]);
 
-
+  // Load Razorpay script
   useEffect(() => {
     if (window.Razorpay) return;
     
@@ -74,6 +68,7 @@ export default function AgentPayments() {
 
     try {
       setLoading(true);
+      // This endpoint should be added to backend - for now using a placeholder
       const res = await axios.get("/api/agent/payment/history", {
         headers: { Authorization: token },
       });
@@ -88,6 +83,7 @@ export default function AgentPayments() {
         unpaidStocks: data.stockInfo?.unpaidStocks || [],
       };
       
+      // Debug logging
       console.log('Agent Payment History Data:', {
         stockInfo: stockInfoData,
         paymentsCount: data.payments?.length || 0,
@@ -97,6 +93,7 @@ export default function AgentPayments() {
       setStockInfo(stockInfoData);
     } catch (err) {
       console.error("Error fetching agent payment history:", err);
+      // If endpoint doesn't exist, set empty data
       if (err?.response?.status === 404) {
         setPaymentHistory([]);
         setStockInfo({
@@ -121,14 +118,15 @@ export default function AgentPayments() {
       return;
     }
 
-    if (paymentAmount < 1) {
-      toast.error("Minimum payment amount is ₹1");
+    if (paymentAmount > stockInfo.unpaidStockAmount) {
+      toast.error("Online payment amount cannot exceed unpaid amount");
       return;
     }
 
     try {
       setProcessingOnlinePayment(true);
 
+      // Wait for Razorpay SDK to load
       if (!window.Razorpay) {
         let attempts = 0;
         while (!window.Razorpay && attempts < 50) {
@@ -145,6 +143,7 @@ export default function AgentPayments() {
         throw new Error('Authentication required. Please login again.');
       }
 
+      // Create Razorpay order
       const orderResponse = await axios.post(
         '/api/agent/payment/create-order',
         { 
@@ -166,6 +165,7 @@ export default function AgentPayments() {
         throw new Error('Payment gateway configuration error. Please contact support.');
       }
 
+      // Initialize Razorpay checkout
       const options = {
         key: orderResult.keyId,
         amount: orderResult.amount,
@@ -175,6 +175,7 @@ export default function AgentPayments() {
         order_id: orderResult.orderId,
         handler: async function (response) {
           try {
+            // Verify payment
             await axios.post(
               '/api/agent/payment/verify',
               {
@@ -193,6 +194,7 @@ export default function AgentPayments() {
             toast.success('Online payment completed successfully!');
             setOnlinePaymentDialogOpen(false);
             setOnlinePaymentAmount("");
+            // Refresh payment history after a short delay to ensure backend has processed
             setTimeout(async () => {
               await fetchPaymentHistory();
             }, 1000);
@@ -231,7 +233,11 @@ export default function AgentPayments() {
         toast.error(errorMsg);
         setProcessingOnlinePayment(false);
       });
+
+      // Open Razorpay checkout - this will open the payment modal
       razorpay.open();
+      
+      // Close dialog after Razorpay opens (payment modal is now open)
       setOnlinePaymentDialogOpen(false);
       
     } catch (error) {
@@ -252,133 +258,68 @@ export default function AgentPayments() {
       year: "numeric",
       month: "short",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
-  };
-
-  const getMethodBadge = (method) => {
-    if (method === "razorpay" || method === "online") {
-      return (
-        <Badge className="bg-purple-500 text-white">
-          <CreditCard className="w-3 h-3 mr-1" />
-          Online
-        </Badge>
-      );
-    }
-    return (
-      <Badge className="bg-gray-500 text-white">
-        <DollarSign className="w-3 h-3 mr-1" />
-        Cash
-      </Badge>
-    );
-  };
-
-  const getStatusBadge = (status) => {
-    if (status === "completed" || status === "paid") {
-      return (
-        <Badge className="bg-green-500 text-white">
-          <CheckCircle2 className="w-3 h-3 mr-1" />
-          Completed
-        </Badge>
-      );
-    }
-    return (
-      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-        <Clock className="w-3 h-3 mr-1" />
-        Pending
-      </Badge>
-    );
   };
 
   if (loading) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <AgentSidebar />
-        <div className="flex-1 ml-64 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <SidebarProvider>
       <AgentSidebar />
-      <div className="flex-1 ml-64 p-8">
+      <SidebarInset>
+        <div className="p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-            <Wallet className="w-8 h-8 text-blue-600" />
-            Payment Status & Pay Admin
-          </h1>
-          <p className="text-gray-600">View your payment status and make payments for stock received</p>
+          <h1 className="text-2xl font-bold mb-4">Pay Admin</h1>
         </div>
 
-      
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-4 gap-4 mb-6">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Stock Amount</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-blue-600">₹{stockInfo.totalStockAmount.toLocaleString()}</p>
+            <CardContent className="p-4">
+              <div className="text-sm">Total Stock Amount</div>
+              <div className="text-2xl font-bold">₹{stockInfo.totalStockAmount.toLocaleString()}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Paid Amount</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-500" />
-                <p className="text-3xl font-bold text-green-600">₹{stockInfo.paidStockAmount.toLocaleString()}</p>
-              </div>
+            <CardContent className="p-4">
+              <div className="text-sm">Paid Amount</div>
+              <div className="text-2xl font-bold">₹{stockInfo.paidStockAmount.toLocaleString()}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Unpaid Amount</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-orange-500" />
-                <p className="text-3xl font-bold text-orange-600">₹{stockInfo.unpaidStockAmount.toLocaleString()}</p>
-              </div>
+            <CardContent className="p-4">
+              <div className="text-sm">Unpaid Amount</div>
+              <div className="text-2xl font-bold">₹{stockInfo.unpaidStockAmount.toLocaleString()}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-purple-600">{paymentHistory.length}</p>
+            <CardContent className="p-4">
+              <div className="text-sm">Total Payments</div>
+              <div className="text-2xl font-bold">{paymentHistory.length}</div>
             </CardContent>
           </Card>
         </div>
 
         {stockInfo.unpaidStockAmount > 0 && (
-          <Card className="mb-6 border-orange-200 bg-orange-50">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3 flex-1">
-                  <AlertCircle className="w-5 h-5 text-orange-600" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-orange-800">Outstanding Payment Required</p>
-                    <p className="text-sm text-orange-600">
-                      You have ₹{stockInfo.unpaidStockAmount.toLocaleString()} unpaid for stock received. 
-                      Please make a payment to clear your dues.
-                    </p>
-                  </div>
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold">Outstanding Payment: ₹{stockInfo.unpaidStockAmount.toLocaleString()}</div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={() => setOnlinePaymentDialogOpen(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Pay Online
-                  </Button>
-                </div>
+                <Button onClick={() => setOnlinePaymentDialogOpen(true)}>
+                  Pay Online
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -386,154 +327,104 @@ export default function AgentPayments() {
 
         {stockInfo.unpaidStocks.length > 0 && (
           <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Unpaid Stock Details</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
+              <div className="mb-4 font-semibold">Unpaid Stock Details</div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="p-2 text-left">Cylinder</th>
-                      <th className="p-2 text-left">Quantity</th>
-                      <th className="p-2 text-left">Price per Unit</th>
-                      <th className="p-2 text-left">Total Amount</th>
-                      <th className="p-2 text-left">Date Received</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cylinder</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Price per Unit</TableHead>
+                      <TableHead>Total Amount</TableHead>
+                      <TableHead>Date Received</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {stockInfo.unpaidStocks.map((stock) => (
-                      <tr key={stock._id} className="border-t hover:bg-gray-50">
-                        <td className="p-2">{stock.cylinderId?.cylinderName || stock.cylinderId?.cylinderType || "N/A"}</td>
-                        <td className="p-2">{stock.quantity || 0}</td>
-                        <td className="p-2">₹{stock.cylinderId?.price?.toLocaleString() || 0}</td>
-                        <td className="p-2 font-semibold">₹{stock.totalAmount?.toLocaleString() || 0}</td>
-                        <td className="p-2">{formatDate(stock.assignedDate || stock.createdAt)}</td>
-                      </tr>
+                      <TableRow key={stock._id}>
+                        <TableCell>{stock.cylinderId?.cylinderName || stock.cylinderId?.cylinderType || "N/A"}</TableCell>
+                        <TableCell>{stock.quantity || 0}</TableCell>
+                        <TableCell>₹{stock.cylinderId?.price?.toLocaleString() || 0}</TableCell>
+                        <TableCell>₹{stock.totalAmount?.toLocaleString() || 0}</TableCell>
+                        <TableCell>{formatDate(stock.assignedDate || stock.createdAt)}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
         )}
 
         <Card>
-          <CardHeader>
-            <CardTitle>Payment History</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
+            <div className="mb-4 font-semibold">Payment History</div>
             {paymentHistory.length === 0 ? (
-              <div className="text-center py-12">
-                <Wallet className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">No payment history found</p>
-              </div>
+              <div className="text-center py-8">No payment history found</div>
             ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {paymentHistory.map((payment) => (
-                  <Card key={payment._id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2 flex-wrap">
-                            <span className="font-semibold text-lg">
-                              Payment #{payment.transactionID?.slice(-8) || payment._id.slice(-8)}
-                            </span>
-                            {getMethodBadge(payment.method)}
-                            {getStatusBadge(payment.status)}
-                          </div>
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <p className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4" />
-                              {formatDate(payment.paymentDate || payment.createdAt)}
-                            </p>
-                            {payment.description && (
-                              <p><strong>Description:</strong> {payment.description}</p>
-                            )}
-                            {payment.notes && (
-                              <p><strong>Notes:</strong> {payment.notes}</p>
-                            )}
-                            {payment.transactionID && (
-                              <p><strong>Transaction ID:</strong> {payment.transactionID}</p>
-                            )}
-                          
-                            {payment.status === "partial" && payment.method === "online" && (
-                              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                                <p className="font-semibold text-yellow-800 text-xs mb-1">Partial Payment</p>
-                                <p className="text-xs">
-                                  <strong>Online Paid:</strong> ₹{(payment.onlinePaid || 0).toLocaleString()}
-                                </p>
-                                <p className="text-xs">
-                                  <strong>Cash Paid:</strong> ₹{(payment.cashPaid || 0).toLocaleString()}
-                                </p>
-                                <p className="text-xs">
-                                  <strong>Remaining Cash:</strong> ₹{(payment.remainingCash || 0).toLocaleString()}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-green-600">
-                            ₹{payment.amount?.toLocaleString() || 0}
-                          </p>
-                          {payment.status === "partial" && (
-                            <p className="text-sm text-orange-600 mt-1">
-                              Remaining: ₹{(payment.remainingCash || 0).toLocaleString()}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Transaction ID</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Description</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paymentHistory.map((payment) => (
+                      <TableRow key={payment._id}>
+                        <TableCell>{payment.transactionID?.slice(-8) || payment._id.slice(-8)}</TableCell>
+                        <TableCell>₹{payment.amount?.toLocaleString() || 0}</TableCell>
+                        <TableCell>
+                          {payment.method === "razorpay" || payment.method === "online" ? "Online" : "Cash"}
+                        </TableCell>
+                        <TableCell>
+                          {payment.status === "completed" || payment.status === "paid" ? "Paid" : "Pending"}
+                        </TableCell>
+                        <TableCell>{formatDate(payment.paymentDate || payment.createdAt)}</TableCell>
+                        <TableCell>{payment.description || payment.notes || "N/A"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
         </Card>
 
-      
         <Dialog open={onlinePaymentDialogOpen} onOpenChange={setOnlinePaymentDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Pay Online via Razorpay</DialogTitle>
-              <DialogDescription>
-                Enter the amount you want to pay manually. The payment will be processed securely through Razorpay.
-              </DialogDescription>
+              <DialogTitle>Pay Online</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="p-3 bg-gray-50 rounded space-y-1 text-sm">
-                <p><strong>Unpaid Amount:</strong> ₹{stockInfo.unpaidStockAmount.toLocaleString()}</p>
-                <p className="text-gray-600">You can enter any desired amount to pay</p>
-              </div>
               <div className="space-y-2">
-                <Label htmlFor="onlineAmount">Payment Amount (₹)</Label>
+                <Label>Amount</Label>
                 <Input
-                  id="onlineAmount"
                   type="number"
                   step="0.01"
-                  min="1"
+                  min="0"
+                  max={stockInfo.unpaidStockAmount}
                   value={onlinePaymentAmount}
                   onChange={(e) => setOnlinePaymentAmount(e.target.value)}
-                  placeholder="Enter amount to pay"
-                  required
+                  placeholder={`Max: ₹${stockInfo.unpaidStockAmount.toLocaleString()}`}
                 />
-                <p className="text-xs text-gray-500">
-                  Unpaid Amount: ₹{stockInfo.unpaidStockAmount.toLocaleString()} | Enter any amount you want to pay
-                </p>
-                {onlinePaymentAmount && parseFloat(onlinePaymentAmount) > 0 && parseFloat(onlinePaymentAmount) < stockInfo.unpaidStockAmount && (
-                  <p className="text-sm text-blue-600 font-medium">
-                    Remaining amount after payment: ₹{(stockInfo.unpaidStockAmount - parseFloat(onlinePaymentAmount)).toLocaleString()}
-                  </p>
+                <div className="text-sm text-gray-500">
+                  Unpaid: ₹{stockInfo.unpaidStockAmount.toLocaleString()}
+                </div>
+                {onlinePaymentAmount && parseFloat(onlinePaymentAmount) > 0 && (
+                  <div className="text-sm">
+                    Remaining: ₹{(stockInfo.unpaidStockAmount - parseFloat(onlinePaymentAmount)).toLocaleString()}
+                  </div>
                 )}
-              </div>
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-                <p className="font-semibold mb-1">Note:</p>
-                <p>Online payments are processed securely through Razorpay. You will be redirected to the payment gateway to complete the transaction.</p>
               </div>
               <DialogFooter>
                 <Button
-                  type="button"
                   variant="outline"
                   onClick={() => {
                     setOnlinePaymentDialogOpen(false);
@@ -543,10 +434,8 @@ export default function AgentPayments() {
                   Cancel
                 </Button>
                 <Button
-                  type="button"
                   onClick={handleOnlinePayment}
                   disabled={processingOnlinePayment}
-                  className="bg-green-600 hover:bg-green-700"
                 >
                   {processingOnlinePayment ? (
                     <>
@@ -554,20 +443,16 @@ export default function AgentPayments() {
                       Processing...
                     </>
                   ) : (
-                    <>
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Pay Now
-                    </>
+                    "Pay Now"
                   )}
                 </Button>
               </DialogFooter>
             </div>
           </DialogContent>
         </Dialog>
-
-
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 

@@ -1,104 +1,86 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useContext } from "react";
 import userContext from "@/context/UserContext";
 import { LogOut, Users, Package, UserCog, LayoutDashboard, CylinderIcon, ShoppingCart, Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Sidebar as SidebarComponent,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator,
+} from "@/components/ui/sidebar";
 
 export default function Sidebar() {
   const { handleLogout, user } = useContext(userContext);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const Logout = () => {
     handleLogout();
     navigate("/login");
   };
 
+  const menuItems = [
+    { title: "Dashboard", icon: LayoutDashboard, url: "/admin" },
+    { title: "Manage Agents", icon: UserCog, url: "/admin/manage-agents" },
+    { title: "Manage Customers", icon: Users, url: "/admin/manage-customers" },
+    { title: "Manage Stocks", icon: Package, url: "/admin/manage-stocks" },
+    { title: "Manage Cylinders", icon: CylinderIcon, url: "/admin/manage-cylinders" },
+    { title: "Agent Stock", icon: Package, url: "/admin/manage-agentstock" },
+    { title: "Gas Requests", icon: ShoppingCart, url: "/admin/gas-requests" },
+    { title: "Payments Received", icon: Wallet, url: "/admin/payments" },
+  ];
+
   return (
-    <aside className="fixed left-0 top-0 w-64 h-screen bg-slate-900 text-white flex flex-col p-5 space-y-2 z-50">
-      <h2 className="text-xl font-semibold mb-6 text-center">
-        Admin Panel
-      </h2>
-
-      <nav className="flex flex-col gap-2">
-        <Link
-          to="/admin"
-          className="flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition"
-        >
-          <LayoutDashboard size={18} />
-          Dashboard
-        </Link>
-
-        <Link
-          to="/admin/manage-agents"
-          className="flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition"
-        >
-          <UserCog size={18} />
-          Manage Agents
-        </Link>
-
-        <Link
-          to="/admin/manage-customers"
-          className="flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition"
-        >
-          <Users size={18} />
-          Manage Customers
-        </Link>
-
-        <Link
-          to="/admin/manage-stocks"
-          className="flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition"
-        >
-          <Package size={18} />
-          Manage Stocks
-        </Link>
-
-        <Link
-          to="/admin/manage-cylinders"
-          className="flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition"
-        >
-          <CylinderIcon size={18} />
-          Manage Cylinders
-        </Link>
-
-        <Link
-        to="/admin/manage-agentstock"
-       className="flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition"
-        >
-        <Package className="w-5 h-5" />
-        Agent Stock
-        </Link>
-
-        <Link
-          to="/admin/gas-requests"
-          className="flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition"
-        >
-          <ShoppingCart size={18} />
-          Gas Requests
-        </Link>
-
-        <Link
-          to="/admin/payments"
-          className="flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition"
-        >
-          <Wallet size={18} />
-          Payments Received
-        </Link>
-      </nav>
-
-      <div className="mt-auto border-t border-slate-700 pt-4">
+    <SidebarComponent>
+      <SidebarHeader>
+        <h2 className="text-xl font-semibold text-center">
+          Admin Panel
+        </h2>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.url}
+                  >
+                    <Link to={item.url}>
+                      <item.icon size={18} />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
         {user && (
-          <div className="text-sm text-slate-300 mb-3">
-            <p>{user.username}</p>
-            <p className="text-xs text-slate-500">{user.email}</p>
+          <div className="text-sm text-sidebar-foreground/70 mb-3 px-2">
+            <p className="font-medium">{user.username}</p>
+            <p className="text-xs text-sidebar-foreground/50">{user.email}</p>
           </div>
         )}
-
-        <button
+        <SidebarSeparator />
+        <Button
           onClick={Logout}
-          className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 py-2 rounded-md font-medium transition"
+          variant="destructive"
+          className="w-full flex items-center justify-center gap-2"
         >
           <LogOut size={16} /> Logout
-        </button>
-      </div>
-    </aside>
+        </Button>
+      </SidebarFooter>
+    </SidebarComponent>
   );
 }

@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import axios from "@/config/config";
 import Sidebar from "@/components/layout/SideBar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Search, RefreshCcw } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 
 export default function ManageCylinders() {
   const [cylinders, setCylinders] = useState([]);
@@ -154,21 +161,38 @@ export default function ManageCylinders() {
   }, [search, filterType, cylinders]);
 
   return (
-    <div>
+    <SidebarProvider>
       <Sidebar />
 
-      <div className="p-6 bg-gray-50 min-h-screen ml-64 max-w-[calc(100%-16rem)]">
-      
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-          <h1 className="text-2xl font-bold text-gray-800">Manage Cylinders</h1>
-
+      <SidebarInset>
+        <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-4">Manage Cylinders</h1>
+        </div>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-sm"
+            />
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="px-3 py-2 border rounded"
+            >
+              <option value="all">All Types</option>
+              <option value="commercial">Commercial</option>
+              <option value="domestic">Domestic</option>
+            </select>
+          </div>
           <div className="flex gap-3">
             <Button
               variant="outline"
               onClick={fetchCylinders}
-              className="flex items-center gap-2"
             >
-              <RefreshCcw size={16} /> Refresh
+              Refresh
             </Button>
 
             <Dialog
@@ -269,77 +293,58 @@ export default function ManageCylinders() {
           </div>
         </div>
 
-    
-        <div className="flex flex-col sm:flex-row justify-between gap-3 mb-6">
-          <div className="flex items-center gap-2">
-            <Search className="text-gray-500" size={18} />
-            <Input
-              placeholder="Search by name or type..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
-
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="border rounded-md px-3 py-2 bg-white text-gray-700"
-          >
-            <option value="all">All Types</option>
-            <option value="commercial">Commercial</option>
-            <option value="domestic">Domestic</option>
-          </select>
-        </div>
-
-        
         {loading ? (
-          <p className="text-gray-600">Loading cylinders...</p>
+          <p className="text-gray-600">Loading...</p>
         ) : filteredCylinders.length === 0 ? (
           <p className="text-gray-600">No cylinders found.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {filteredCylinders.map((cylinder) => (
-              <Card
-                key={cylinder._id}
-                className="bg-white border border-gray-200 shadow-md hover:shadow-lg transition-all duration-300 p-4"
-              >
-                <CardHeader>
-                  <CardTitle className="text-xl font-semibold text-gray-800">
-                    {cylinder.cylinderName}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-gray-700 space-y-1">
-                  <p><strong>Type:</strong> {cylinder.cylinderType}</p>
-                  <p><strong>Weight:</strong> {cylinder.weight} kg</p>
-                  <p><strong>Price:</strong> ₹{cylinder.price}</p>
-
-                  <div className="flex gap-3 mt-5 justify-center">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setViewCylinder(cylinder)}
-                    >
-                      View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditDialog(cylinder)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(cylinder._id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cylinder Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Weight</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCylinders.map((cylinder) => (
+                  <TableRow key={cylinder._id}>
+                    <TableCell className="font-medium">{cylinder.cylinderName}</TableCell>
+                    <TableCell>{cylinder.cylinderType}</TableCell>
+                    <TableCell>{cylinder.weight} kg</TableCell>
+                    <TableCell>₹{cylinder.price}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setViewCylinder(cylinder)}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(cylinder)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(cylinder._id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
 
@@ -360,7 +365,8 @@ export default function ManageCylinders() {
             </DialogContent>
           </Dialog>
         )}
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

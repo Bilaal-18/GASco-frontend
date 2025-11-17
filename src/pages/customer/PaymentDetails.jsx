@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPaymentDetails } from "@/store/slices/customer/paymentDetailsSlice";
 import CustomerSidebar from "@/components/layout/CustomerSidebar";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -11,13 +12,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Wallet, Loader2, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Loader2 } from "lucide-react";
 
 export default function PaymentDetails() {
   const dispatch = useDispatch();
   const { payments, loading, error } = useSelector((state) => state.paymentDetails);
   const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     dispatch(fetchPaymentDetails());
@@ -28,36 +39,27 @@ export default function PaymentDetails() {
     return payment.paymentStatus === filter || payment.status === filter;
   });
 
-  const getPaymentStatusBadge = (status) => {
-    const statusConfig = {
-      paid: { variant: "default", className: "bg-green-500", icon: CheckCircle2, label: "Paid" },
-      pending: {
-        variant: "secondary",
-        className: "bg-yellow-500",
-        icon: Clock,
-        label: "Pending",
-      },
-      failed: {
-        variant: "destructive",
-        className: "bg-red-500",
-        icon: AlertCircle,
-        label: "Failed",
-      },
-    };
+  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedPayments = filteredPayments.slice(startIndex, endIndex);
 
-    const config = statusConfig[status?.toLowerCase()] || {
-      variant: "secondary",
-      icon: Clock,
-      label: status || "Pending",
+  const getPaymentStatusText = (status) => {
+    const statusMap = {
+      paid: "Paid",
+      pending: "Pending",
+      failed: "Failed",
     };
-    const Icon = config.icon;
+    return statusMap[status?.toLowerCase()] || status || "Pending";
+  };
 
-    return (
-      <Badge variant={config.variant} className={config.className}>
-        <Icon className="w-3 h-3 mr-1" />
-        {config.label}
-      </Badge>
-    );
+  const getPaymentStatusColor = (status) => {
+    const statusLower = status?.toLowerCase();
+    if (statusLower === "paid") return "text-green-600";
+    if (statusLower === "pending") return "text-yellow-600";
+    if (statusLower === "failed") return "text-red-600";
+    return "text-gray-600";
   };
 
   const totalPaid = payments
@@ -70,117 +72,101 @@ export default function PaymentDetails() {
 
   if (loading) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <CustomerSidebar />
-        <div className="flex-1 ml-64 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <SidebarProvider>
       <CustomerSidebar />
-      <div className="flex-1 ml-64 p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-            <Wallet className="w-8 h-8 text-blue-600" />
-            Payment Details
-          </h1>
-          <p className="text-gray-600">View your payment history and transaction details</p>
+      <SidebarInset>
+        <div className="p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-4">Payment Details</h1>
         </div>
 
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-6">
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-blue-600">{payments.length}</p>
+            <CardContent className="p-4">
+              <div className="text-sm">Total Payments</div>
+              <div className="text-2xl font-bold">{payments.length}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Paid</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-green-600">₹{totalPaid.toLocaleString()}</p>
+            <CardContent className="p-4">
+              <div className="text-sm">Total Paid</div>
+              <div className="text-2xl font-bold text-green-600">₹{totalPaid.toLocaleString()}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">Pending Payments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-yellow-600">₹{totalPending.toLocaleString()}</p>
+            <CardContent className="p-4">
+              <div className="text-sm">Pending Payments</div>
+              <div className="text-2xl font-bold text-yellow-600">₹{totalPending.toLocaleString()}</div>
             </CardContent>
           </Card>
         </div>
 
-      
         <div className="flex gap-2 mb-6">
           {["all", "paid", "pending", "failed"].map((status) => (
-            <button
+            <Button
               key={status}
+              variant={filter === status ? "default" : "outline"}
               onClick={() => setFilter(status)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                filter === status
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 border hover:bg-gray-50"
-              }`}
+              size="sm"
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
+            </Button>
           ))}
         </div>
 
         {error && (
-          <Card className="mb-6 border-red-200 bg-red-50">
-            <CardContent className="pt-6">
-              <p className="text-red-600">Error: {error}</p>
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="text-red-600">Error: {error}</div>
             </CardContent>
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment History ({filteredPayments.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {filteredPayments.length === 0 ? (
-              <div className="text-center py-12">
-                <Wallet className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-500 text-lg">No payments found</p>
-              </div>
-            ) : (
+        {filteredPayments.length === 0 ? (
+          <Card>
+            <CardContent className="p-8">
+              <div className="text-center">No payments found</div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Payment ID</TableHead>
                     <TableHead>Booking ID</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Payment Method</TableHead>
+                    <TableHead>Method</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPayments.map((payment) => (
+                  {paginatedPayments.map((payment) => (
                     <TableRow key={payment._id}>
-                      <TableCell className="font-medium">
-                        #{payment._id?.slice(-8).toUpperCase()}
-                      </TableCell>
+                      <TableCell>#{payment._id?.slice(-8).toUpperCase()}</TableCell>
                       <TableCell>
                         {payment.bookingId ? `#${payment.bookingId.slice(-8).toUpperCase()}` : "N/A"}
                       </TableCell>
-                      <TableCell className="font-semibold">
-                        ₹{payment.amount?.toLocaleString() || 0}
-                      </TableCell>
+                      <TableCell>₹{payment.amount?.toLocaleString() || 0}</TableCell>
                       <TableCell>{payment.paymentMethod || "N/A"}</TableCell>
                       <TableCell>
-                        {getPaymentStatusBadge(payment.paymentStatus || payment.status)}
+                        <span className={getPaymentStatusColor(payment.paymentStatus || payment.status)}>
+                          {getPaymentStatusText(payment.paymentStatus || payment.status)}
+                        </span>
                       </TableCell>
                       <TableCell>
                         {new Date(payment.createdAt || payment.paymentDate).toLocaleDateString()}
@@ -189,10 +175,55 @@ export default function PaymentDetails() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+
+            {totalPages > 1 && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPage((prev) => Math.max(1, prev - 1));
+                      }}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: totalPages }).map((_, index) => {
+                    const pageNumber = index + 1;
+                    return (
+                      <PaginationItem key={pageNumber}>
+                        <PaginationLink
+                          href="#"
+                          isActive={currentPage === pageNumber}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage(pageNumber);
+                          }}
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPage((prev) => Math.min(totalPages, prev + 1));
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          </>
+        )}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

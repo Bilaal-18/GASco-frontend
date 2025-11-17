@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import axios from "@/config/config";
 import Sidebar from "@/components/layout/SideBar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,7 +26,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, Clock, Filter, Search } from "lucide-react";
 
 export default function GasRequests() {
   const [requests, setRequests] = useState([]);
@@ -110,84 +116,56 @@ export default function GasRequests() {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      pending: (
-        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          Pending
-        </span>
-      ),
-      approved: (
-        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 flex items-center gap-1">
-          <CheckCircle className="w-3 h-3" />
-          Approved
-        </span>
-      ),
-      rejected: (
-        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 flex items-center gap-1">
-          <XCircle className="w-3 h-3" />
-          Rejected
-        </span>
-      ),
-    };
-    return badges[status] || badges.pending;
+  const getStatusText = (status) => {
+    return status === "pending" ? "Pending" : status === "approved" ? "Approved" : "Rejected";
+  };
+
+  const getStatusColor = (status) => {
+    return status === "pending" ? "text-yellow-600" : status === "approved" ? "text-green-600" : "text-red-600";
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <SidebarProvider>
         <Sidebar />
-        <div className="ml-64 max-w-[calc(100%-16rem)] p-8 flex items-center justify-center">
-          <p className="text-gray-500">Loading gas requests...</p>
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="flex items-center justify-center min-h-screen">
+            <p className="text-gray-500">Loading gas requests...</p>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <SidebarProvider>
       <Sidebar />
-      <div className="p-8 ml-64 max-w-[calc(100%-16rem)]">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-gray-800 mb-2">
-            Gas Requests Management
-          </h1>
-          <p className="text-gray-600">
-            View and manage gas requests from agents
-          </p>
+      <SidebarInset>
+        <div className="p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-4">Gas Requests</h1>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search by agent name or cylinder type..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="text-gray-400 w-4 h-4" />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Requests</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="flex gap-2 mb-6">
+          <Input
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1"
+          />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Requests</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Requests List */}
         {filteredRequests.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
@@ -199,94 +177,62 @@ export default function GasRequests() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredRequests.map((request) => (
-              <Card
-                key={request._id}
-                className={`shadow-md transition ${
-                  request.status === "pending"
-                    ? "border-l-4 border-yellow-500"
-                    : request.status === "approved"
-                    ? "border-l-4 border-green-500"
-                    : "border-l-4 border-red-500"
-                }`}
-              >
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">
-                      {request.cylinderId?.cylinderType || "Cylinder"}
-                    </CardTitle>
-                    {getStatusBadge(request.status)}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-500">Agent Name</p>
-                    <p className="font-semibold">
-                      {request.agentId?.agentname || "N/A"}
-                    </p>
-                  </div>
-                  <div className="flex justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500">Weight</p>
-                      <p className="font-semibold">
-                        {request.cylinderId?.weight} kg
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Price</p>
-                      <p className="font-semibold">
-                        ₹{request.cylinderId?.price}
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Quantity Requested</p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {request.quantity}
-                    </p>
-                  </div>
-                  {request.remarks && (
-                    <div>
-                      <p className="text-sm text-gray-500">Remarks</p>
-                      <p className="text-sm italic">{request.remarks}</p>
-                    </div>
-                  )}
-                  <div className="text-xs text-gray-400">
-                    Requested:{" "}
-                    {new Date(request.requestedAt).toLocaleString()}
-                  </div>
-                  {request.status === "pending" && (
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        onClick={() => handleApprove(request._id)}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Approve
-                      </Button>
-                      <Button
-                        onClick={() =>
-                          setRejectDialog({ open: true, requestId: request._id })
-                        }
-                        variant="destructive"
-                        className="flex-1"
-                      >
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Reject
-                      </Button>
-                    </div>
-                  )}
-                  {request.status === "rejected" && request.remarks && (
-                    <div className="mt-2 p-2 bg-red-50 rounded text-sm">
-                      <p className="text-red-700">
-                        <strong>Rejection reason:</strong> {request.remarks}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Agent</TableHead>
+                  <TableHead>Cylinder Type</TableHead>
+                  <TableHead>Weight</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRequests.map((request) => (
+                  <TableRow key={request._id}>
+                    <TableCell>{request.agentId?.agentname || "N/A"}</TableCell>
+                    <TableCell>{request.cylinderId?.cylinderType || "N/A"}</TableCell>
+                    <TableCell>{request.cylinderId?.weight} kg</TableCell>
+                    <TableCell>₹{request.cylinderId?.price}</TableCell>
+                    <TableCell className="font-semibold">{request.quantity}</TableCell>
+                    <TableCell>
+                      <span className={getStatusColor(request.status)}>
+                        {getStatusText(request.status)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(request.requestedAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {request.status === "pending" && (
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleApprove(request._id)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            onClick={() =>
+                              setRejectDialog({ open: true, requestId: request._id })
+                            }
+                            variant="destructive"
+                            size="sm"
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
 
@@ -303,11 +249,11 @@ export default function GasRequests() {
             </DialogHeader>
             <div className="space-y-4 mt-2">
               <div>
-                <Label>Rejection Remarks (Optional)</Label>
+                <Label>Remarks</Label>
                 <Input
                   value={rejectRemarks}
                   onChange={(e) => setRejectRemarks(e.target.value)}
-                  placeholder="Enter reason for rejection"
+                  placeholder="Remarks"
                 />
               </div>
             </div>
@@ -327,8 +273,9 @@ export default function GasRequests() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 

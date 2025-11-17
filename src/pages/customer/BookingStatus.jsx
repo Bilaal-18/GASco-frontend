@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchBookingById, fetchCustomerBookings } from "@/store/slices/customer/customerBookingsSlice";
 import CustomerSidebar from "@/components/layout/CustomerSidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,40 +53,45 @@ export default function BookingStatus() {
 
   if (loading) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <CustomerSidebar />
-        <div className="flex-1 ml-64 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="flex items-center justify-center min-h-screen">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   if (error || !selectedBooking) {
     return (
-      <div className="flex bg-gray-50 min-h-screen">
+      <SidebarProvider>
         <CustomerSidebar />
-        <div className="flex-1 ml-64 p-8">
-          <Button variant="outline" onClick={() => navigate("/customer/bookings")} className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Bookings
-          </Button>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-red-600">Error: {error || "Booking not found"}</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        <SidebarInset>
+          <div className="p-8">
+            <Button variant="outline" onClick={() => navigate("/customer/bookings")} className="mb-4">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Bookings
+            </Button>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-red-600">Error: {error || "Booking not found"}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   const totalAmount = (selectedBooking.quantity || 0) * (selectedBooking.cylinder?.price || 0);
 
   return (
-    <div className="flex bg-gray-50 min-h-screen">
+    <SidebarProvider>
       <CustomerSidebar />
-      <div className="flex-1 ml-64 p-8">
+      <SidebarInset>
+        <div className="p-8">
         <Button variant="outline" onClick={() => navigate("/customer/bookings")} className="mb-6">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Bookings
@@ -185,7 +191,8 @@ export default function BookingStatus() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

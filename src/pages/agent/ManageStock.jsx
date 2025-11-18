@@ -64,6 +64,7 @@ export default function ManageStock() {
       try {
         const res = await axios.get(`/api/ownStock/${agentId}`, { headers: { Authorization: token } });
         setStocks(res.data.Ownstock || []);
+        console.log(res);
       } catch (err) {
         console.error("Error fetching stock data:", err);
       } finally {
@@ -215,6 +216,7 @@ export default function ManageStock() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Company</TableHead>
                         <TableHead>Cylinder</TableHead>
                         <TableHead>Weight</TableHead>
                         <TableHead>Price</TableHead>
@@ -227,6 +229,7 @@ export default function ManageStock() {
                     <TableBody>
                       {requests.map((request) => (
                         <TableRow key={request._id}>
+                          <TableCell>{request.cylinderId?.cylinderName}</TableCell>
                           <TableCell>{request.cylinderId?.cylinderType || "N/A"}</TableCell>
                           <TableCell>{request.cylinderId?.weight || "N/A"} kg</TableCell>
                           <TableCell>₹{request.cylinderId?.price || "N/A"}</TableCell>
@@ -250,46 +253,65 @@ export default function ManageStock() {
           </Card>
         )}
 
-        {stocks.length === 0 ? (
-          <div className="text-center py-4">No stock available</div>
-        ) : (
-          <Card>
-            <CardContent className="p-4">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cylinder</TableHead>
-                      <TableHead>Weight</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {stocks.map((stock) => (
-                      <TableRow key={stock._id}>
-                        <TableCell>{stock.cylinderId?.cylinderType || "N/A"}</TableCell>
-                        <TableCell>{stock.cylinderId?.weight || "N/A"} kg</TableCell>
-                        <TableCell>₹{stock.cylinderId?.price || "N/A"}</TableCell>
-                        <TableCell>{stock.quantity || 0}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(stock)}
-                          >
-                            Return Stock
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+  {stocks.length === 0 ? (
+    <p className="text-center text-muted-foreground col-span-full">No stock available</p>
+  ) : (
+    stocks.map((item) => {
+      const totalValue = item.totalAmount || (item.quantity * item.price);
+
+      return (
+        <Card
+          key={item._id}
+          className="p-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+        >
+          <CardContent className="space-y-4">
+
+            {/* Cylinder Title */}
+            <div>
+              <h2 className="text-lg font-bold">
+                {item.cylinderId?.cylinderName ||"Cylinder"}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {item.cylinderId?.cylinderType || "Unknown Type"}
+              </p>
+            </div>
+
+            {/* Item Details */}
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Quantity</span>
+                <span className="font-medium">{item.quantity}</span>
               </div>
-            </CardContent>
-          </Card>
-        )}
+
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Price</span>
+                <span className="font-medium">₹{item.cylinderId?.price.toLocaleString()}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Value</span>
+                <span className="font-semibold text-primary">₹{totalValue.toLocaleString()}</span>
+              </div>
+
+            
+            </div>
+
+            {/* Return Button */}
+            <Button
+              size="sm"
+              variant="destructive"
+              className="w-full"
+              onClick={() => handleDelete(item)}  // same function you used before
+            >
+              Return Stock
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    })
+  )}
+</div>
 
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
           <DialogContent>
@@ -309,7 +331,7 @@ export default function ManageStock() {
                   <SelectContent>
                     {cylinders.map((cylinder) => (
                       <SelectItem key={cylinder._id} value={cylinder._id}>
-                        {cylinder.cylinderType} ({cylinder.weight}kg) - ₹{cylinder.price}
+                       {cylinder.cylinderName} {cylinder.cylinderType} ({cylinder.weight}kg) - ₹{cylinder.price}
                       </SelectItem>
                     ))}
                   </SelectContent>

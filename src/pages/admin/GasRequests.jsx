@@ -183,6 +183,7 @@ export default function GasRequests() {
                 <TableRow>
                   <TableHead>Agent</TableHead>
                   <TableHead>Cylinder Type</TableHead>
+                  <TableHead>Company</TableHead>
                   <TableHead>Weight</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Quantity</TableHead>
@@ -194,6 +195,7 @@ export default function GasRequests() {
               <TableBody>
                 {filteredRequests.map((request) => (
                   <TableRow key={request._id}>
+                    <TableCell>{request.cylinderId?.cylinderName}</TableCell>
                     <TableCell>{request.agentId?.agentname || "N/A"}</TableCell>
                     <TableCell>{request.cylinderId?.cylinderType || "N/A"}</TableCell>
                     <TableCell>{request.cylinderId?.weight} kg</TableCell>

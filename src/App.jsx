@@ -40,7 +40,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/admin" element={<AdminDashboard/>}/>
+            <Route path="/admin" element={<PrivateRoute><AdminDashboard/></PrivateRoute>}/>
             <Route path="/admin/manage-agents" element={<PrivateRoute><ManageAgents /></PrivateRoute>} />
             <Route path="/admin/manage-customers" element={<PrivateRoute><ManageCustomers/></PrivateRoute>}/>
             <Route path="/admin/manage-stocks" element={<PrivateRoute><ManageStocks/></PrivateRoute>}/>

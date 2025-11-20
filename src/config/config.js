@@ -1,5 +1,5 @@
 import axios from "axios";
 //https://gasco-0x4w.onrender.com
 export default axios.create({
-    baseURL:"http://localhost:3090"
+    baseURL:"https://gasco-0x4w.onrender.com"
 })

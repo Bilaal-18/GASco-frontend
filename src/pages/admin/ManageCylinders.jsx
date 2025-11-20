@@ -5,15 +5,9 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +27,17 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { RefreshCcw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ManageCylinders() {
   const [cylinders, setCylinders] = useState([]);
@@ -42,7 +47,6 @@ export default function ManageCylinders() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [viewCylinder, setViewCylinder] = useState(null);
 
   const [formData, setFormData] = useState({
     cylinderName: "",
@@ -116,7 +120,6 @@ export default function ManageCylinders() {
 
 
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this cylinder?")) return;
     try {
       await axios.delete(`/api/delete/${id}`, {
         headers: { Authorization: token },
@@ -177,22 +180,28 @@ export default function ManageCylinders() {
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-sm"
             />
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-2 border rounded"
-            >
-              <option value="all">All Types</option>
-              <option value="commercial">Commercial</option>
-              <option value="domestic">Domestic</option>
-            </select>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="commercial">Commercial</SelectItem>
+                <SelectItem value="domestic">Domestic</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex gap-3">
             <Button
               variant="outline"
               onClick={fetchCylinders}
+              disabled={loading}
             >
-              Refresh
+              <RefreshCcw
+                size={16}
+                className={`mr-2 ${loading ? "animate-spin" : ""}`}
+              />
+              {loading ? "Refreshing..." : "Refresh"}
             </Button>
 
             <Dialog
@@ -298,72 +307,70 @@ export default function ManageCylinders() {
         ) : filteredCylinders.length === 0 ? (
           <p className="text-gray-600">No cylinders found.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cylinder Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Weight</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCylinders.map((cylinder) => (
-                  <TableRow key={cylinder._id}>
-                    <TableCell className="font-medium">{cylinder.cylinderName}</TableCell>
-                    <TableCell>{cylinder.cylinderType}</TableCell>
-                    <TableCell>{cylinder.weight} kg</TableCell>
-                    <TableCell>₹{cylinder.price}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setViewCylinder(cylinder)}
-                        >
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(cylinder)}
-                        >
-                          Edit
-                        </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredCylinders.map((cylinder) => (
+              <Card key={cylinder._id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="text-lg">{cylinder.cylinderName}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Type:</span>
+                      <span className="text-sm font-medium">{cylinder.cylinderType}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Weight:</span>
+                      <span className="text-sm font-medium">{cylinder.weight} kg</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Price:</span>
+                      <span className="text-sm font-semibold text-green-600">₹{cylinder.price}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditDialog(cylinder)}
+                      className="flex-1"
+                    >
+                      Edit
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleDelete(cylinder._id)}
+                          className="flex-1"
                         >
                           Delete
                         </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the cylinder
+                            "{cylinder.cylinderName}".
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(cylinder._id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        )}
-
-        
-        {viewCylinder && (
-          <Dialog open={!!viewCylinder} onOpenChange={() => setViewCylinder(null)}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Cylinder Details</DialogTitle>
-              </DialogHeader>
-              <div className="text-sm space-y-2">
-                <p><strong>Name:</strong> {viewCylinder.cylinderName}</p>
-                <p><strong>Type:</strong> {viewCylinder.cylinderType}</p>
-                <p><strong>Weight:</strong> {viewCylinder.weight} kg</p>
-                <p><strong>Price:</strong> ₹{viewCylinder.price}</p>
-                <p><strong>ID:</strong> {viewCylinder._id}</p>
-              </div>
-            </DialogContent>
-          </Dialog>
         )}
         </div>
       </SidebarInset>

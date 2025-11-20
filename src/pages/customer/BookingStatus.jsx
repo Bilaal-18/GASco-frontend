@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchBookingById, fetchCustomerBookings } from "@/store/slices/customer/customerBookingsSlice";
@@ -7,8 +7,8 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, CheckCircle2, Clock, Package } from "lucide-react";
-import PaymentButton from "@/components/PaymentButton";
+import { ArrowLeft, Loader2, CheckCircle2, Clock, Package, CreditCard } from "lucide-react";
+import useRazorpayPayment from "@/utils/razorpay";
 import { toast } from "sonner";
 
 export default function BookingStatus() {
@@ -16,6 +16,8 @@ export default function BookingStatus() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { selectedBooking, loading, error } = useSelector((state) => state.customerBookings);
+  const { handlePayment } = useRazorpayPayment();
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   useEffect(() => {
     if (bookingId) {
@@ -176,16 +178,39 @@ export default function BookingStatus() {
                   {selectedBooking.paymentStatus?.toUpperCase() || "PENDING"}
                 </Badge>
               </div>
-              {selectedBooking.paymentStatus !== "paid" && (
+              {selectedBooking.paymentStatus !== "paid" && selectedBooking.status === "delivered" && selectedBooking.paymentMethod === "online" && (
                 <div>
-                  <PaymentButton
-                    booking={selectedBooking}
-                    onPaymentSuccess={async () => {
-                      await dispatch(fetchBookingById(selectedBooking._id));
-                      await dispatch(fetchCustomerBookings());
-                      toast.success("Payment successful! Booking updated.");
+                  <Button
+                    onClick={async () => {
+                      setProcessingPayment(true);
+                      const totalAmount = (selectedBooking.quantity || 0) * (selectedBooking.cylinder?.price || 0);
+                      const success = await handlePayment({
+                        amount: totalAmount,
+                        bookingId: selectedBooking._id,
+                        paymentType: "customer",
+                        description: `Payment for booking #${selectedBooking._id?.slice(-8).toUpperCase()}`,
+                      });
+                      if (success) {
+                        await dispatch(fetchBookingById(selectedBooking._id));
+                        await dispatch(fetchCustomerBookings());
+                      }
+                      setProcessingPayment(false);
                     }}
-                  />
+                    disabled={processingPayment}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {processingPayment ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Pay ₹{totalAmount.toLocaleString()}
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
             </CardContent>

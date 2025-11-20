@@ -99,15 +99,16 @@ export default function AdminPayments() {
       setLoading(true);
       
       // Make GET request to backend API endpoint to fetch all agent payments
-      // The endpoint is: GET /api/admin/agent-payments
+      // The endpoint is: GET /api/payment/history with paymentType=agent
       // Headers include the token for authentication
-      const res = await axios.get("/api/admin/agent-payments", {
+      const res = await axios.get("/api/payment/history", {
+        params: { paymentType: 'agent' },
         headers: { Authorization: token }, // Send token in request header
       });
 
       // Extract payments data from response - handle different response formats
-      // Backend might return data in res.data.payments or directly in res.data
-      const paymentsData = res.data?.payments || res.data || [];
+      // Backend returns data in res.data.payments
+      const paymentsData = res.data?.payments || [];
       
       // Ensure we have an array (safety check) - convert to array if needed
       const paymentsArray = Array.isArray(paymentsData) ? paymentsData : [];
@@ -244,7 +245,8 @@ export default function AdminPayments() {
             let allPayments = [];
             
             try {
-              const paymentsRes = await axios.get("/api/admin/agent-payments", {
+              const paymentsRes = await axios.get("/api/payment/history", {
+                params: { paymentType: 'agent' },
                 headers: { Authorization: token },
               });
               

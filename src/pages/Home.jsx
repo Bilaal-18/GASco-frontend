@@ -5,13 +5,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import Navbar from "../components/Navbar";
 import axios from "@/config/config";
 import { Loader2 } from "lucide-react";
-
+import { toast } from "sonner";
 export default function Home() {
   const [stats, setStats] = useState({ agents: 0, customers: 0 });
   const [cylinders, setCylinders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+   toast.info("The site may take some time to load", {
+  description: "Because my server is running on Render"})
+
+    
     const fetchHomeData = async () => {
       try {
         const [statsRes, cylindersRes] = await Promise.all([

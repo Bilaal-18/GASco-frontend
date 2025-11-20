@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import axios from "@/config/config";
 import {
   Card,
@@ -29,11 +29,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { RefreshCcw } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import Sidebar from "@/components/layout/SideBar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
 export default function ManageAgents() {
   const [agents, setAgents] = useState([]);
+  const [filteredAgents, setFilteredAgents] = useState([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [viewAgent, setViewAgent] = useState(null);
@@ -41,6 +51,7 @@ export default function ManageAgents() {
   const [page, setPage] = useState(1);
   const perPage = 5;
   const [loading, setLoading] = useState(false);
+  const SEARCH_ENDPOINT = (role) => `/api/search/${role}`;
 
   const [formData, setFormData] = useState({
     agentname: "",
@@ -71,6 +82,9 @@ export default function ManageAgents() {
       }));
 
       setAgents(formatted);
+      setFilteredAgents(formatted);
+      setSearch("");
+      setPage(1);
     } catch (err) {
       console.error(err);
       toast.error("Failed to fetch agents");
@@ -158,26 +172,43 @@ export default function ManageAgents() {
     setOpen(true);
   };
 
-  // -------- useMemo Optimization --------
-  
-  const filteredAgents = useMemo(() => {
-    return agents.filter(
-      (a) =>
-        a.agentname?.toLowerCase().includes(search.toLowerCase()) ||
-        a.email?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [agents, search]);
-
-  const totalPages = Math.ceil(filteredAgents.length / perPage);
-
-  const displayedAgents = useMemo(() => {
-    const start = (page - 1) * perPage;
-    return filteredAgents.slice(start, start + perPage);
-  }, [filteredAgents, page]);
-
-  useEffect(() => {
+  const handleAgentSearch = async (value) => {
+    setSearch(value);
     setPage(1);
-  }, [search]);
+
+    if (!value.trim()) {
+      setFilteredAgents(agents);
+      return;
+    }
+
+    try {
+      const res = await axios.get(SEARCH_ENDPOINT("agent"), {
+        params: {
+          search: value.trim(),
+          page: 1,
+          limit: perPage
+        },
+        headers: { Authorization: token },
+      });
+
+      const data =
+        res.data?.users ||
+        res.data?.results ||
+        res.data?.data ||
+        res.data?.list ||
+        res.data ||
+        [];
+
+      setFilteredAgents(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Agent search failed:", err);
+      toast.error(err.response?.data?.error || "Failed to search agents");
+    }
+  };
+
+  const totalPages = Math.max(1, Math.ceil(filteredAgents.length / perPage));
+  const startIndex = (page - 1) * perPage;
+  const displayedAgents = filteredAgents.slice(startIndex, startIndex + perPage);
 
   return (
     <SidebarProvider>
@@ -185,21 +216,14 @@ export default function ManageAgents() {
       <SidebarInset>
         <div className="p-6">
           <Card className="p-6">
-            <CardHeader className="flex justify-between items-center">
-              <CardTitle>Manage Agents</CardTitle>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={fetchAgents}
-                  disabled={loading}
-                >
-                  <RefreshCcw
-                    size={16}
-                    className={`mr-2 ${loading ? "animate-spin" : ""}`}
-                  />
-                  {loading ? "Refreshing..." : "Refresh"}
-                </Button>
-
+            <CardHeader>
+              <div className="flex justify-between items-center gap-4">
+                <Input
+                  placeholder="Search agents..."
+                  value={search}
+                  onChange={(e) => handleAgentSearch(e.target.value)}
+                  className="max-w-sm"
+                />
                 <Dialog open={open} onOpenChange={setOpen}>
                   <DialogTrigger asChild>
                     <Button onClick={() => setEditing(null)}>Add Agent</Button>
@@ -269,16 +293,6 @@ export default function ManageAgents() {
             </CardHeader>
 
             <CardContent>
-              {/* Search */}
-              <div className="mb-4">
-                <Input
-                  placeholder="Search..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="max-w-sm"
-                />
-              </div>
-
               {/* Table */}
               <div className="overflow-x-auto rounded-md border">
                 <table className="w-full text-sm">
@@ -332,19 +346,78 @@ export default function ManageAgents() {
               </div>
 
               {/* Pagination */}
-              <div className="flex justify-between items-center mt-4">
-                <p className="text-sm text-gray-500">
-                  Page {page} of {totalPages || 1}
-                </p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
-                    Prev
-                  </Button>
-                  <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
-                    Next
-                  </Button>
+              {filteredAgents.length > perPage && (
+                <div className="flex justify-between items-center mt-4">
+                  <p className="text-sm text-gray-500">
+                    Showing {startIndex + 1} - {Math.min(startIndex + perPage, filteredAgents.length)} of {filteredAgents.length}
+                  </p>
+
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (page > 1) setPage(page - 1);
+                          }}
+                          className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                      
+                      {(() => {
+                        const pages = [];
+                        let lastPage = 0;
+                        
+                        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                          if (
+                            pageNum === 1 ||
+                            pageNum === totalPages ||
+                            (pageNum >= page - 1 && pageNum <= page + 1)
+                          ) {
+                            if (pageNum > lastPage + 1) {
+                              pages.push(
+                                <PaginationItem key={`ellipsis-${lastPage}`}>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              );
+                            }
+                            pages.push(
+                              <PaginationItem key={pageNum}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setPage(pageNum);
+                                  }}
+                                  isActive={page === pageNum}
+                                  className="cursor-pointer"
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                            lastPage = pageNum;
+                          }
+                        }
+                        
+                        return pages;
+                      })()}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (page < totalPages) setPage(page + 1);
+                          }}
+                          className={page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 

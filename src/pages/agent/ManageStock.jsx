@@ -171,6 +171,10 @@ export default function ManageStock() {
     }
     try {
       const cylinderId = stock.cylinderId?._id || stock.cylinderId;
+      if (!cylinderId) {
+        toast.error("Cylinder ID not found");
+        return;
+      }
       await axios.delete(`/api/DeleteStock/${agentId}/${cylinderId}`, { 
         headers: { Authorization: token } 
       });

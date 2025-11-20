@@ -141,6 +141,7 @@ export default function AvailableCylinders() {
                     }
                   }
                   const isAvailable = quantityValue === null || quantityValue > 0;
+                  const isOutOfStock = quantityValue !== null && quantityValue === 0;
                   
                   return (
                     <TableRow key={cylinder._id}>
@@ -149,16 +150,18 @@ export default function AvailableCylinders() {
                       <TableCell>{cylinder.weight || "N/A"} kg</TableCell>
                       <TableCell>₹{cylinder.price?.toLocaleString() || "N/A"}</TableCell>
                       <TableCell>
-                        {isAvailable ? (
+                        {isOutOfStock ? (
+                          <span className="text-red-600 font-medium">Out of Stock</span>
+                        ) : isAvailable ? (
                           <span className="text-green-600">Available</span>
                         ) : (
-                          <span className="text-red-600">Not Available</span>
+                          <span className="text-gray-500">Available</span>
                         )}
                       </TableCell>
                       <TableCell>
                         <Button
                           onClick={() => handleBookCylinder(cylinder)}
-                          disabled={quantityValue !== null && quantityValue === 0}
+                          disabled={isOutOfStock}
                         >
                           Book
                         </Button>

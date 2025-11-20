@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import axios from "@/config/config";
 import { toast } from "sonner";
@@ -200,15 +201,16 @@ export default function Payments() {
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1"
           />
-          <select
-            value={methodFilter}
-            onChange={(e) => setMethodFilter(e.target.value)}
-            className="px-3 py-2 border rounded"
-          >
-            <option value="all">All Methods</option>
-            <option value="online">Online</option>
-            <option value="cash">Cash</option>
-          </select>
+          <Select value={methodFilter} onValueChange={setMethodFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Methods" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Methods</SelectItem>
+              <SelectItem value="online">Online</SelectItem>
+              <SelectItem value="cash">Cash</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {filteredPayments.length === 0 ? (

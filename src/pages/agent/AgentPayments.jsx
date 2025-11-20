@@ -20,9 +20,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2 } from "lucide-react";
+import { Loader2, CreditCard } from "lucide-react";
 import axios from "@/config/config";
 import { toast } from "sonner";
+import useRazorpayPayment from "@/utils/razorpay";
 
 export default function AgentPayments() {
   const [paymentHistory, setPaymentHistory] = useState([]);
@@ -35,29 +36,14 @@ export default function AgentPayments() {
   const [loading, setLoading] = useState(true);
   const [onlinePaymentDialogOpen, setOnlinePaymentDialogOpen] = useState(false);
   const [onlinePaymentAmount, setOnlinePaymentAmount] = useState("");
-  const [processingOnlinePayment, setProcessingOnlinePayment] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
   const token = localStorage.getItem("token");
+  const { handlePayment } = useRazorpayPayment();
 
   useEffect(() => {
     fetchPaymentHistory();
   }, [token]);
 
-  // Load Razorpay script
-  useEffect(() => {
-    if (window.Razorpay) return;
-    
-    const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
-    if (existingScript) return;
-
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onerror = () => {
-      console.error('Failed to load Razorpay SDK');
-      toast.error('Failed to load payment gateway. Please refresh the page.');
-    };
-    document.body.appendChild(script);
-  }, []);
 
   const fetchPaymentHistory = async () => {
     if (!token) {
@@ -68,8 +54,8 @@ export default function AgentPayments() {
 
     try {
       setLoading(true);
-      // This endpoint should be added to backend - for now using a placeholder
-      const res = await axios.get("/api/agent/payment/history", {
+      const res = await axios.get("/api/payment/history", {
+        params: { paymentType: 'agent' },
         headers: { Authorization: token },
       });
 
@@ -123,131 +109,24 @@ export default function AgentPayments() {
       return;
     }
 
-    try {
-      setProcessingOnlinePayment(true);
+    setProcessingPayment(true);
+    setOnlinePaymentDialogOpen(false);
+    
+    const success = await handlePayment({
+      amount: paymentAmount,
+      paymentType: "agent",
+      totalDue: stockInfo.unpaidStockAmount,
+      description: "Online payment for stock received from admin",
+    });
 
-      // Wait for Razorpay SDK to load
-      if (!window.Razorpay) {
-        let attempts = 0;
-        while (!window.Razorpay && attempts < 50) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          attempts++;
-        }
-        
-        if (!window.Razorpay) {
-          throw new Error('Razorpay SDK not loaded. Please refresh the page and try again.');
-        }
-      }
-
-      if (!token) {
-        throw new Error('Authentication required. Please login again.');
-      }
-
-      // Create Razorpay order
-      const orderResponse = await axios.post(
-        '/api/agent/payment/create-order',
-        { 
-          amount: paymentAmount,
-          description: `Online payment for stock received from admin`
-        },
-        {
-          headers: { Authorization: token },
-        }
-      );
-
-      const orderResult = orderResponse.data;
-
-      if (!orderResult || !orderResult.orderId) {
-        throw new Error(orderResult?.error || 'Failed to create payment order');
-      }
-
-      if (!orderResult.keyId) {
-        throw new Error('Payment gateway configuration error. Please contact support.');
-      }
-
-      // Initialize Razorpay checkout
-      const options = {
-        key: orderResult.keyId,
-        amount: orderResult.amount,
-        currency: orderResult.currency || 'INR',
-        name: 'GASCo',
-        description: `Payment - ₹${paymentAmount.toLocaleString()}`,
-        order_id: orderResult.orderId,
-        handler: async function (response) {
-          try {
-            // Verify payment
-            await axios.post(
-              '/api/agent/payment/verify',
-              {
-                orderId: response.razorpay_order_id,
-                paymentId: response.razorpay_payment_id,
-                signature: response.razorpay_signature,
-                amount: paymentAmount,
-                totalDue: stockInfo.unpaidStockAmount,
-                description: `Online payment for stock received from admin`,
-              },
-              {
-                headers: { Authorization: token },
-              }
-            );
-
-            toast.success('Online payment completed successfully!');
-            setOnlinePaymentDialogOpen(false);
-            setOnlinePaymentAmount("");
-            // Refresh payment history after a short delay to ensure backend has processed
-            setTimeout(async () => {
-              await fetchPaymentHistory();
-            }, 1000);
-          } catch (error) {
-            console.error('Payment verification error:', error);
-            toast.error(error?.response?.data?.error || 'Payment verification failed');
-          } finally {
-            setProcessingOnlinePayment(false);
-          }
-        },
-        theme: {
-          color: '#2563eb',
-        },
-        modal: {
-          ondismiss: function () {
-            setProcessingOnlinePayment(false);
-            toast.info('Payment cancelled');
-          },
-        },
-      };
-
-      const razorpay = new window.Razorpay(options);
-      
-      razorpay.on('payment.failed', function (response) {
-        console.error('Payment failed:', response);
-        const error = response.error || response;
-        const errorMsg = error.description || error.message || 'Payment failed. Please try again.';
-        toast.error(errorMsg);
-        setProcessingOnlinePayment(false);
-      });
-
-      razorpay.on('error', function (error) {
-        console.error('Razorpay error:', error);
-        const errorObj = error.error || error;
-        const errorMsg = errorObj.description || errorObj.message || 'Payment gateway error. Please try again.';
-        toast.error(errorMsg);
-        setProcessingOnlinePayment(false);
-      });
-
-      // Open Razorpay checkout - this will open the payment modal
-      razorpay.open();
-      
-      // Close dialog after Razorpay opens (payment modal is now open)
-      setOnlinePaymentDialogOpen(false);
-      
-    } catch (error) {
-      console.error('Payment initialization error:', error);
-      const errorMessage = error?.response?.data?.error 
-        || error?.message 
-        || 'Failed to initialize payment';
-      toast.error(errorMessage, { duration: 5000 });
-      setProcessingOnlinePayment(false);
+    if (success) {
+      setOnlinePaymentAmount("");
+      setTimeout(() => {
+        fetchPaymentHistory();
+      }, 1000);
     }
+    
+    setProcessingPayment(false);
   };
 
 
@@ -317,9 +196,42 @@ export default function AgentPayments() {
                 <div>
                   <div className="font-semibold">Outstanding Payment: ₹{stockInfo.unpaidStockAmount.toLocaleString()}</div>
                 </div>
-                <Button onClick={() => setOnlinePaymentDialogOpen(true)}>
-                  Pay Online
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={async () => {
+                      setProcessingPayment(true);
+                      const success = await handlePayment({
+                        amount: stockInfo.unpaidStockAmount,
+                        paymentType: "agent",
+                        totalDue: stockInfo.unpaidStockAmount,
+                        description: "Online payment for stock received from admin",
+                      });
+                      if (success) {
+                        setTimeout(() => {
+                          fetchPaymentHistory();
+                        }, 1000);
+                      }
+                      setProcessingPayment(false);
+                    }}
+                    disabled={processingPayment}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {processingPayment ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Pay ₹{stockInfo.unpaidStockAmount.toLocaleString()}
+                      </>
+                    )}
+                  </Button>
+                  <Button onClick={() => setOnlinePaymentDialogOpen(true)} variant="outline">
+                    Pay Partial Amount
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -435,15 +347,19 @@ export default function AgentPayments() {
                 </Button>
                 <Button
                   onClick={handleOnlinePayment}
-                  disabled={processingOnlinePayment}
+                  disabled={processingPayment}
+                  className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  {processingOnlinePayment ? (
+                  {processingPayment ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Processing...
                     </>
                   ) : (
-                    "Pay Now"
+                    <>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Pay ₹{parseFloat(onlinePaymentAmount || 0).toLocaleString()}
+                    </>
                   )}
                 </Button>
               </DialogFooter>

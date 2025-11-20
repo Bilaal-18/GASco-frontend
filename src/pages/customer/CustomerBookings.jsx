@@ -10,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import PaymentButton from "@/components/PaymentButton";
+import useRazorpayPayment from "@/utils/razorpay";
+import { CreditCard } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -35,6 +36,8 @@ export default function CustomerBookings() {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
+  const { handlePayment } = useRazorpayPayment();
+  const [processingPayment, setProcessingPayment] = useState(null);
 
 
   useEffect(() => {
@@ -235,13 +238,36 @@ const paginatedBookings = filteredBookings.slice(startIndex, endIndex);
                         <TableCell>
                           <div className="flex gap-2">
                             {booking.status === "delivered" && booking.paymentStatus !== "paid" && booking.paymentMethod === "online" && (
-                              <PaymentButton
-                                booking={booking}
-                                onPaymentSuccess={() => {
-                                  dispatch(fetchCustomerBookings());
-                                  toast.success("Payment successful!");
+                              <Button
+                                onClick={async () => {
+                                  setProcessingPayment(booking._id);
+                                  const totalAmount = (booking.quantity || 0) * (booking.cylinder?.price || 0);
+                                  const success = await handlePayment({
+                                    amount: totalAmount,
+                                    bookingId: booking._id,
+                                    paymentType: "customer",
+                                    description: `Payment for booking #${booking._id?.slice(-8).toUpperCase()}`,
+                                  });
+                                  if (success) {
+                                    dispatch(fetchCustomerBookings());
+                                  }
+                                  setProcessingPayment(null);
                                 }}
-                              />
+                                disabled={processingPayment === booking._id}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                {processingPayment === booking._id ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Processing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CreditCard className="w-4 h-4 mr-2" />
+                                    Pay ₹{((booking.quantity || 0) * (booking.cylinder?.price || 0)).toLocaleString()}
+                                  </>
+                                )}
+                              </Button>
                             )}
                             {(booking.status === "pending" || booking.status === "requested") && (
                               <>

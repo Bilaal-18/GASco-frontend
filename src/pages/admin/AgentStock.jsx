@@ -152,6 +152,10 @@ const AgentStock = () => {
   
   const handleDelete = async (agentId, cylinderId) => {
     // if (!window.confirm("Are you sure you want to delete this stock?")) return;
+    if (!agentId || !cylinderId) {
+      toast.error("Agent ID or Cylinder ID is missing");
+      return;
+    }
     try {
       const res = await axios.delete(`/api/DeleteStock/${agentId}/${cylinderId}`, {
         headers: { Authorization: token },

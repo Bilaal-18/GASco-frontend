@@ -5,7 +5,6 @@ import customerBookingsSlice from './slices/customer/customerBookingsSlice';
 import availableCylindersSlice from './slices/customer/availableCylindersSlice';
 import assignedAgentSlice from './slices/customer/assignedAgentSlice';
 import paymentDetailsSlice from './slices/customer/paymentDetailsSlice';
-import paymentSlice from './slices/customer/paymentSlice';
 
 export const store = configureStore({
   reducer: {
@@ -15,6 +14,5 @@ export const store = configureStore({
     availableCylinders: availableCylindersSlice,
     assignedAgent: assignedAgentSlice,
     paymentDetails: paymentDetailsSlice,
-    payment: paymentSlice,
   },
 });

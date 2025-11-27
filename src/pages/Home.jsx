@@ -11,11 +11,17 @@ export default function Home() {
   const [cylinders, setCylinders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-   toast.info("The site may take some time to load", {
-  description: "Because my server is running on Render"})
 
-    
+  useEffect(() => {
+    toast.info("Server may respond slowly", {
+      description: "The server is currently running on a free tier hosting service, so initial requests may take longer to load.",
+      action: {
+        label: "OK",
+        onClick: () => {}
+      }
+    });
+
+
     const fetchHomeData = async () => {
       try {
         const [statsRes, cylindersRes] = await Promise.all([

@@ -398,6 +398,7 @@ const AgentStock = () => {
                   
                   {selectedCylinder && (
                     <div className="bg-gray-50 border p-3 rounded-md text-sm text-gray-700">
+                      <p><strong>Name:</strong> {selectedCylinder.cylinderName}</p>
                       <p><strong>Type:</strong> {selectedCylinder.cylinderType}</p>
                       <p><strong>Weight:</strong> {selectedCylinder.weight} kg</p>
                       <p><strong>Price:</strong> ₹{selectedCylinder.price}</p>

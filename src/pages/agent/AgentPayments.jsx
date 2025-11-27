@@ -33,10 +33,12 @@ export default function AgentPayments() {
     paidStockAmount: 0,
     unpaidStocks: [],
   });
+  
   const [loading, setLoading] = useState(true);
   const [onlinePaymentDialogOpen, setOnlinePaymentDialogOpen] = useState(false);
   const [onlinePaymentAmount, setOnlinePaymentAmount] = useState("");
   const [processingPayment, setProcessingPayment] = useState(false);
+  
   const token = localStorage.getItem("token");
   const { handlePayment } = useRazorpayPayment();
 
@@ -44,10 +46,9 @@ export default function AgentPayments() {
     fetchPaymentHistory();
   }, [token]);
 
-
   const fetchPaymentHistory = async () => {
     if (!token) {
-      toast.error("Authentication token not found");
+      toast.error("Please login to continue");
       setLoading(false);
       return;
     }
@@ -60,37 +61,24 @@ export default function AgentPayments() {
       });
 
       const data = res.data || {};
+      
       setPaymentHistory(data.payments || []);
       
-      const stockInfoData = {
+      setStockInfo({
         totalStockAmount: data.stockInfo?.totalStockAmount || 0,
         unpaidStockAmount: data.stockInfo?.unpaidStockAmount || 0,
         paidStockAmount: data.stockInfo?.paidStockAmount || 0,
         unpaidStocks: data.stockInfo?.unpaidStocks || [],
-      };
-      
-      // Debug logging
-      console.log('Agent Payment History Data:', {
-        stockInfo: stockInfoData,
-        paymentsCount: data.payments?.length || 0,
-        rawData: data.stockInfo
       });
-      
-      setStockInfo(stockInfoData);
     } catch (err) {
-      console.error("Error fetching agent payment history:", err);
-      // If endpoint doesn't exist, set empty data
-      if (err?.response?.status === 404) {
-        setPaymentHistory([]);
-        setStockInfo({
-          totalStockAmount: 0,
-          unpaidStockAmount: 0,
-          paidStockAmount: 0,
-          unpaidStocks: [],
-        });
-      } else {
-        toast.error(err?.response?.data?.error || "Failed to fetch payment history");
-      }
+      toast.error(err?.response?.data?.error || "Failed to load payment information");
+      setPaymentHistory([]);
+      setStockInfo({
+        totalStockAmount: 0,
+        unpaidStockAmount: 0,
+        paidStockAmount: 0,
+        unpaidStocks: [],
+      });
     } finally {
       setLoading(false);
     }
@@ -105,7 +93,7 @@ export default function AgentPayments() {
     }
 
     if (paymentAmount > stockInfo.unpaidStockAmount) {
-      toast.error("Online payment amount cannot exceed unpaid amount");
+      toast.error("Payment amount cannot exceed unpaid amount");
       return;
     }
 
@@ -129,6 +117,24 @@ export default function AgentPayments() {
     setProcessingPayment(false);
   };
 
+  const handleFullPayment = async () => {
+    setProcessingPayment(true);
+    
+    const success = await handlePayment({
+      amount: stockInfo.unpaidStockAmount,
+      paymentType: "agent",
+      totalDue: stockInfo.unpaidStockAmount,
+      description: "Online payment for stock received from admin",
+    });
+
+    if (success) {
+      setTimeout(() => {
+        fetchPaymentHistory();
+      }, 1000);
+    }
+    
+    setProcessingPayment(false);
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -158,61 +164,57 @@ export default function AgentPayments() {
       <AgentSidebar />
       <SidebarInset>
         <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold mb-4">Pay Admin</h1>
-        </div>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">Payment Management</h1>
+            <p className="text-gray-600">Pay for stock received from admin</p>
+          </div>
 
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-sm">Total Stock Amount</div>
-              <div className="text-2xl font-bold">₹{stockInfo.totalStockAmount.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-sm">Paid Amount</div>
-              <div className="text-2xl font-bold">₹{stockInfo.paidStockAmount.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-sm">Unpaid Amount</div>
-              <div className="text-2xl font-bold">₹{stockInfo.unpaidStockAmount.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-sm">Total Payments</div>
-              <div className="text-2xl font-bold">{paymentHistory.length}</div>
-            </CardContent>
-          </Card>
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-sm text-gray-600 mb-1">Total Stock Amount</div>
+                <div className="text-2xl font-bold">₹{stockInfo.totalStockAmount.toLocaleString()}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-sm text-gray-600 mb-1">Paid Amount</div>
+                <div className="text-2xl font-bold text-green-600">
+                  ₹{stockInfo.paidStockAmount.toLocaleString()}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-sm text-gray-600 mb-1">Unpaid Amount</div>
+                <div className="text-2xl font-bold text-red-600">
+                  ₹{stockInfo.unpaidStockAmount.toLocaleString()}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-sm text-gray-600 mb-1">Total Payments Made</div>
+                <div className="text-2xl font-bold">{paymentHistory.length}</div>
+              </CardContent>
+            </Card>
+          </div>
 
         {stockInfo.unpaidStockAmount > 0 && (
           <Card className="mb-6">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-semibold">Outstanding Payment: ₹{stockInfo.unpaidStockAmount.toLocaleString()}</div>
+                  <div className="font-semibold text-lg">
+                    Outstanding Payment: ₹{stockInfo.unpaidStockAmount.toLocaleString()}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    onClick={async () => {
-                      setProcessingPayment(true);
-                      const success = await handlePayment({
-                        amount: stockInfo.unpaidStockAmount,
-                        paymentType: "agent",
-                        totalDue: stockInfo.unpaidStockAmount,
-                        description: "Online payment for stock received from admin",
-                      });
-                      if (success) {
-                        setTimeout(() => {
-                          fetchPaymentHistory();
-                        }, 1000);
-                      }
-                      setProcessingPayment(false);
-                    }}
+                    onClick={handleFullPayment}
                     disabled={processingPayment}
                     className="bg-green-600 hover:bg-green-700 text-white"
                   >
@@ -224,11 +226,15 @@ export default function AgentPayments() {
                     ) : (
                       <>
                         <CreditCard className="w-4 h-4 mr-2" />
-                        Pay ₹{stockInfo.unpaidStockAmount.toLocaleString()}
+                        Pay Full Amount
                       </>
                     )}
                   </Button>
-                  <Button onClick={() => setOnlinePaymentDialogOpen(true)} variant="outline">
+                  
+                  <Button 
+                    onClick={() => setOnlinePaymentDialogOpen(true)} 
+                    variant="outline"
+                  >
                     Pay Partial Amount
                   </Button>
                 </div>
@@ -240,12 +246,12 @@ export default function AgentPayments() {
         {stockInfo.unpaidStocks.length > 0 && (
           <Card className="mb-6">
             <CardContent className="p-4">
-              <div className="mb-4 font-semibold">Unpaid Stock Details</div>
+              <div className="mb-4 font-semibold text-lg">Unpaid Stock Details</div>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Cylinder</TableHead>
+                      <TableHead>Cylinder Type</TableHead>
                       <TableHead>Quantity</TableHead>
                       <TableHead>Price per Unit</TableHead>
                       <TableHead>Total Amount</TableHead>
@@ -255,10 +261,12 @@ export default function AgentPayments() {
                   <TableBody>
                     {stockInfo.unpaidStocks.map((stock) => (
                       <TableRow key={stock._id}>
-                        <TableCell>{stock.cylinderId?.cylinderName || stock.cylinderId?.cylinderType || "N/A"}</TableCell>
+                        <TableCell>
+                          {stock.cylinderId?.cylinderName || stock.cylinderId?.cylinderType || "N/A"}
+                        </TableCell>
                         <TableCell>{stock.quantity || 0}</TableCell>
-                        <TableCell>₹{stock.cylinderId?.price?.toLocaleString() || 0}</TableCell>
-                        <TableCell>₹{stock.totalAmount?.toLocaleString() || 0}</TableCell>
+                        <TableCell>₹{(stock.cylinderId?.price || 0).toLocaleString()}</TableCell>
+                        <TableCell>₹{(stock.totalAmount || 0).toLocaleString()}</TableCell>
                         <TableCell>{formatDate(stock.assignedDate || stock.createdAt)}</TableCell>
                       </TableRow>
                     ))}
@@ -271,9 +279,11 @@ export default function AgentPayments() {
 
         <Card>
           <CardContent className="p-4">
-            <div className="mb-4 font-semibold">Payment History</div>
+            <div className="mb-4 font-semibold text-lg">Payment History</div>
             {paymentHistory.length === 0 ? (
-              <div className="text-center py-8">No payment history found</div>
+              <div className="text-center py-8 text-gray-500">
+                No payment history found
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
@@ -281,27 +291,47 @@ export default function AgentPayments() {
                     <TableRow>
                       <TableHead>Transaction ID</TableHead>
                       <TableHead>Amount</TableHead>
-                      <TableHead>Method</TableHead>
+                      <TableHead>Payment Method</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Description</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paymentHistory.map((payment) => (
-                      <TableRow key={payment._id}>
-                        <TableCell>{payment.transactionID?.slice(-8) || payment._id.slice(-8)}</TableCell>
-                        <TableCell>₹{payment.amount?.toLocaleString() || 0}</TableCell>
-                        <TableCell>
-                          {payment.method === "razorpay" || payment.method === "online" ? "Online" : "Cash"}
-                        </TableCell>
-                        <TableCell>
-                          {payment.status === "completed" || payment.status === "paid" ? "Paid" : "Pending"}
-                        </TableCell>
-                        <TableCell>{formatDate(payment.paymentDate || payment.createdAt)}</TableCell>
-                        <TableCell>{payment.description || payment.notes || "N/A"}</TableCell>
-                      </TableRow>
-                    ))}
+                    {paymentHistory.map((payment) => {
+                      const transactionId = payment.transactionID?.slice(-8) || payment._id.slice(-8);
+                      
+                      const paymentMethod = 
+                        payment.method === "razorpay" || payment.method === "online" 
+                          ? "Online" 
+                          : "Cash";
+                      
+                      const paymentStatus = 
+                        payment.status === "completed" || payment.status === "paid" 
+                          ? "Paid" 
+                          : "Pending";
+                      
+                      return (
+                        <TableRow key={payment._id}>
+                          <TableCell className="font-mono text-sm">{transactionId}</TableCell>
+                          <TableCell className="font-semibold">
+                            ₹{(payment.amount || 0).toLocaleString()}
+                          </TableCell>
+                          <TableCell>{paymentMethod}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              paymentStatus === "Paid" 
+                                ? "bg-green-100 text-green-800" 
+                                : "bg-yellow-100 text-yellow-800"
+                            }`}>
+                              {paymentStatus}
+                            </span>
+                          </TableCell>
+                          <TableCell>{formatDate(payment.paymentDate || payment.createdAt)}</TableCell>
+                          <TableCell>{payment.description || payment.notes || "-"}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -312,29 +342,33 @@ export default function AgentPayments() {
         <Dialog open={onlinePaymentDialogOpen} onOpenChange={setOnlinePaymentDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Pay Online</DialogTitle>
+              <DialogTitle>Pay Partial Amount</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Amount</Label>
+                <Label htmlFor="amount">Enter Amount (₹)</Label>
                 <Input
+                  id="amount"
                   type="number"
                   step="0.01"
                   min="0"
                   max={stockInfo.unpaidStockAmount}
                   value={onlinePaymentAmount}
                   onChange={(e) => setOnlinePaymentAmount(e.target.value)}
-                  placeholder={`Max: ₹${stockInfo.unpaidStockAmount.toLocaleString()}`}
+                  placeholder={`Maximum: ₹${stockInfo.unpaidStockAmount.toLocaleString()}`}
                 />
+                
                 <div className="text-sm text-gray-500">
-                  Unpaid: ₹{stockInfo.unpaidStockAmount.toLocaleString()}
+                  Unpaid Amount: ₹{stockInfo.unpaidStockAmount.toLocaleString()}
                 </div>
+                
                 {onlinePaymentAmount && parseFloat(onlinePaymentAmount) > 0 && (
-                  <div className="text-sm">
-                    Remaining: ₹{(stockInfo.unpaidStockAmount - parseFloat(onlinePaymentAmount)).toLocaleString()}
+                  <div className="text-sm font-medium">
+                    Remaining After Payment: ₹{(stockInfo.unpaidStockAmount - parseFloat(onlinePaymentAmount)).toLocaleString()}
                   </div>
                 )}
               </div>
+              
               <DialogFooter>
                 <Button
                   variant="outline"
@@ -347,7 +381,7 @@ export default function AgentPayments() {
                 </Button>
                 <Button
                   onClick={handleOnlinePayment}
-                  disabled={processingPayment}
+                  disabled={processingPayment || !onlinePaymentAmount}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   {processingPayment ? (

@@ -17,115 +17,60 @@ import { Loader2 } from "lucide-react";
 import axios from "@/config/config";
 import { toast } from "sonner";
 
-// Main component function - this is the AdminPayments page component
 export default function AdminPayments() {
-  // ============================================
-  // STATE MANAGEMENT - Store data that changes over time
-  // ============================================
-  
-  // State to store all agent payments received from backend API
   const [agentPayments, setAgentPayments] = useState([]);
-  
-  // State to store filtered payments (after applying search/filter)
   const [filteredPayments, setFilteredPayments] = useState([]);
-  
-  // State to store pending amounts for each agent (calculated from stock - payments)
   const [agentPendingAmounts, setAgentPendingAmounts] = useState([]);
-  
-  // State to track if data is currently being loaded from backend
   const [loading, setLoading] = useState(true);
-  
-  // State to store search text entered by user in search box
   const [search, setSearch] = useState("");
-  
-
-  
-  // State to store selected payment method filter (all, online, cash)
   const [methodFilter, setMethodFilter] = useState("all");
-  
-  // State to track which tab is active - "payments" shows received payments, "pending" shows pending amounts
-  const [activeTab, setActiveTab] = useState("payments"); // "payments" or "pending"
-  
-  // State for cash payment dialog (for updating partial payments)
+  const [activeTab, setActiveTab] = useState("payments");
   const [cashPaymentDialogOpen, setCashPaymentDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [cashPaidAmount, setCashPaidAmount] = useState("");
   const [updatingCashPaid, setUpdatingCashPaid] = useState(false);
-  
-  // State for new cash payment dialog (for creating new cash payments)
   const [newCashPaymentDialogOpen, setNewCashPaymentDialogOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [newCashAmount, setNewCashAmount] = useState("");
   const [newCashDescription, setNewCashDescription] = useState("");
   const [creatingCashPayment, setCreatingCashPayment] = useState(false);
-  
-  // State to store statistics calculated from payments data
   const [stats, setStats] = useState({
-    totalAmount: 0,        // Sum of all payment amounts
-    onlinePayments: 0,     // Count of online/razorpay payments
-    cashPayments: 0,       // Count of cash payments
-    totalCount: 0,         // Total number of payments
-    totalAgents: 0,        // Number of unique agents who made payments
-    totalPending: 0,       // Total pending amount across all agents
+    totalAmount: 0,
+    onlinePayments: 0,
+    cashPayments: 0,
+    totalCount: 0,
+    totalAgents: 0,
+    totalPending: 0,
   });
   
-  // Get authentication token from browser's local storage - needed for API requests
   const token = localStorage.getItem("token");
 
-  // ============================================
-  // USE EFFECT - Runs when component loads or token changes
-  // ============================================
-  // This effect runs automatically when the component first loads
-  // It fetches both payments and pending amounts from the backend
   useEffect(() => {
-    fetchAgentPayments();        // Call function to get all payments from backend
-    fetchAgentPendingAmounts();  // Call function to calculate pending amounts
-  }, [token]); // Re-run if token changes (user logs in/out)
+    fetchAgentPayments();
+    fetchAgentPendingAmounts();
+  }, [token]);
 
-  // ============================================
-  // FUNCTION: Fetch Agent Payments from Backend
-  // ============================================
-  // This function makes an API call to get all payments received from agents
   const fetchAgentPayments = async () => {
-    // Check if user has authentication token - if not, show error and stop
     if (!token) {
-      toast.error("Authentication token not found"); // Show error message to user
-      setLoading(false); // Stop loading spinner
-      return; // Exit function early
+      toast.error("Authentication token not found");
+      setLoading(false);
+      return;
     }
 
     try {
-      // Set loading to true - this shows loading spinner to user
       setLoading(true);
       
-      // Make GET request to backend API endpoint to fetch all agent payments
-      // The endpoint is: GET /api/payment/history with paymentType=agent
-      // Headers include the token for authentication
       const res = await axios.get("/api/payment/history", {
         params: { paymentType: 'agent' },
-        headers: { Authorization: token }, // Send token in request header
+        headers: { Authorization: token },
       });
 
-      // Extract payments data from response - handle different response formats
-      // Backend returns data in res.data.payments
       const paymentsData = res.data?.payments || [];
-      
-      // Ensure we have an array (safety check) - convert to array if needed
       const paymentsArray = Array.isArray(paymentsData) ? paymentsData : [];
       
-      // Store all payments in state - this updates the component
       setAgentPayments(paymentsArray);
-      
-      // Also set filtered payments initially (before any filters applied)
       setFilteredPayments(paymentsArray);
 
-      // ============================================
-      // Calculate Statistics from Payments Data
-      // ============================================
-      
-      // Calculate total amount: sum all payment amounts (including partial payments)
-      // For partial/paid payments: onlinePaid + cashPaid
-      // For completed payments: amount
       const totalAmount = paymentsArray.reduce((sum, p) => {
         if (p.status === 'partial' || p.status === 'paid') {
           const onlinePaid = Number(p.onlinePaid || 0);
@@ -137,79 +82,41 @@ export default function AdminPayments() {
         return sum;
       }, 0);
       
-      // Count online payments: filter payments where method is "razorpay" or "online"
-      // Then get the length (count) of filtered array
       const onlinePayments = paymentsArray.filter(p => p.method === "razorpay" || p.method === "online").length;
-      
-      // Count cash payments: filter payments where method is "cash"
       const cashPayments = paymentsArray.filter(p => p.method === "cash").length;
-      
-      // Count unique agents: create a Set (unique values) of agent IDs
-      // Map through payments to get agent ID, then get size of Set
       const uniqueAgents = new Set(paymentsArray.map(p => p.agent?._id || p.agent)).size;
 
-      // Update stats state with calculated values
-      // prev => ({...prev, ...}) keeps existing stats and only updates new values
       setStats(prev => ({
-        ...prev,              // Keep existing stats values
-        totalAmount,          // Update total amount
-        onlinePayments,       // Update online payments count
-        cashPayments,         // Update cash payments count
-        totalCount: paymentsArray.length, // Update total count
-        totalAgents: uniqueAgents,        // Update unique agents count
+        ...prev,
+        totalAmount,
+        onlinePayments,
+        cashPayments,
+        totalCount: paymentsArray.length,
+        totalAgents: uniqueAgents,
       }));
     } catch (err) {
-      // If API call fails, log error to console for debugging
       console.error("Error fetching agent payments:", err);
-      
-      // Show error message to user - try to get error message from response, or use default
       toast.error(err?.response?.data?.error || "Failed to fetch agent payments");
-      
-      // Set empty arrays so UI doesn't break
       setAgentPayments([]);
       setFilteredPayments([]);
     } finally {
-      // Always run this code - whether success or error
-      setLoading(false); // Hide loading spinner
+      setLoading(false);
     }
   };
 
-  // ============================================
-  // FUNCTION: Fetch Agent Pending Amounts
-  // ============================================
-  // This function calculates how much each agent still owes
-  // Formula: Pending = Total Stock Amount - Total Paid Amount
   const fetchAgentPendingAmounts = async () => {
-    // If no token, exit early - can't make API calls without authentication
     if (!token) return;
 
     try {
-      // ============================================
-      // Step 1: Fetch All Agents from Backend
-      // ============================================
-      // Make GET request to get list of all agents (distributors)
-      // Endpoint: GET /api/distributors
       const agentsRes = await axios.get("/api/distributors", {
-        headers: { Authorization: token }, // Send token for authentication
+        headers: { Authorization: token },
       });
       
-      // Extract agents array from response, default to empty array if not found
       const agents = agentsRes.data || [];
 
-      // ============================================
-      // Step 2: For Each Agent, Calculate Pending Amount
-      // ============================================
-      // Use Promise.all to fetch data for all agents in parallel (faster)
-      // map creates an array of promises (one for each agent)
       const pendingAmounts = await Promise.all(
         agents.map(async (agent) => {
           try {
-            // ============================================
-            // Step 2a: Get Agent's Stock Information
-            // ============================================
-            // Make GET request to get all stock assigned to this agent
-            // Endpoint: GET /api/ownStock/:agentId
-            // Note: This endpoint requires agent auth, so we'll handle errors gracefully
             let stocks = [];
             let totalStockAmount = 0;
             
@@ -218,30 +125,19 @@ export default function AdminPayments() {
                 headers: { Authorization: token },
               });
               
-              // Extract stock data from response
-              // Backend returns data in Ownstock field or directly
               stocks = stockRes.data?.Ownstock || stockRes.data?.stocks || stockRes.data || [];
               
-              // Ensure stocks is an array
               if (!Array.isArray(stocks)) {
                 console.warn(`Stocks data for agent ${agent._id} is not an array:`, stocks);
                 stocks = [];
               }
               
-              // Calculate total stock amount: sum all stock item amounts
-              // Each stock item has a totalAmount field
               totalStockAmount = stocks.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
             } catch (stockError) {
-              // If we can't fetch stock (e.g., authorization issue), try to get from payments data
               console.warn(`Could not fetch stock for agent ${agent._id}, will calculate from payments:`, stockError?.response?.status || stockError?.message);
-              // We'll calculate from payments if available, otherwise default to 0
               totalStockAmount = 0;
             }
 
-            // ============================================
-            // Step 2b: Get Agent's Payment History
-            // ============================================
-            // Make GET request to get all payments (we already have this, but need to filter)
             let allPayments = [];
             
             try {
@@ -250,10 +146,8 @@ export default function AdminPayments() {
                 headers: { Authorization: token },
               });
               
-              // Extract all payments from response
               allPayments = paymentsRes.data?.payments || [];
               
-              // Ensure allPayments is an array
               if (!Array.isArray(allPayments)) {
                 console.warn(`Payments data is not an array:`, allPayments);
                 allPayments = [];
@@ -263,9 +157,7 @@ export default function AdminPayments() {
               allPayments = [];
             }
             
-            // If we couldn't get stock amount, try to estimate from payments
             if (totalStockAmount === 0 && allPayments.length > 0) {
-              // Estimate total stock from the highest totalDue in payments
               const maxTotalDue = Math.max(...allPayments
                 .filter(p => (p.agent?._id || p.agent)?.toString() === agent._id.toString())
                 .map(p => Number(p.totalDue || 0))
@@ -276,54 +168,38 @@ export default function AdminPayments() {
               }
             }
             
-            // Filter payments to only get payments from this specific agent
-            // Compare agent ID from payment with current agent's ID
             const agentPayments = allPayments.filter(
               (p) => (p.agent?._id || p.agent)?.toString() === agent._id.toString()
             );
             
-            // Calculate total amount paid by this agent (including partial payments)
-            // For partial/paid/completed payments: prefer onlinePaid + cashPaid if available, otherwise use amount
-            // For pending/failed payments: don't count them
             const totalPaid = agentPayments.reduce((sum, p) => {
-              // Skip pending or failed payments
               if (p.status === 'pending' || p.status === 'failed') {
                 return sum;
               }
               
-              // For partial, paid, or completed payments, try to use onlinePaid + cashPaid first
               const onlinePaid = Number(p.onlinePaid || 0);
               const cashPaid = Number(p.cashPaid || 0);
               const hasPartialFields = onlinePaid > 0 || cashPaid > 0;
               
               if (hasPartialFields) {
-                // If onlinePaid or cashPaid exists, use their sum
                 return sum + onlinePaid + cashPaid;
               } else {
-                // Otherwise, use the amount field
                 return sum + (Number(p.amount || 0));
               }
             }, 0);
 
-            // ============================================
-            // Step 2c: Calculate Pending Amount
-            // ============================================
-            // Pending = Total Stock Amount - Total Paid Amount
             const pendingAmount = totalStockAmount - totalPaid;
 
-            // Return object with agent info and calculated amounts
             return {
-              agentId: agent._id,                                    // Agent's unique ID
-              agentName: agent.agentname || agent.username || "Unknown", // Agent's name
-              email: agent.email || "N/A",                          // Agent's email
-              phoneNo: agent.phoneNo || "N/A",                       // Agent's phone number
-              totalStockAmount,                                       // Total value of stock assigned
-              totalPaid,                                             // Total amount agent has paid
-              pendingAmount: pendingAmount > 0 ? pendingAmount : 0,   // Pending amount (can't be negative)
+              agentId: agent._id,
+              agentName: agent.agentname || agent.username || "Unknown",
+              email: agent.email || "N/A",
+              phoneNo: agent.phoneNo || "N/A",
+              totalStockAmount,
+              totalPaid,
+              pendingAmount: pendingAmount > 0 ? pendingAmount : 0,
             };
           } catch (err) {
-            // If error fetching data for this agent, log it and return default values
-            // Only log if it's not an axios error (which we're already handling above)
             if (!err?.isAxiosError) {
               console.error(`Unexpected error fetching data for agent ${agent._id}:`, err);
             }
@@ -332,60 +208,37 @@ export default function AdminPayments() {
               agentName: agent.agentname || agent.username || "Unknown",
               email: agent.email || "N/A",
               phoneNo: agent.phoneNo || "N/A",
-              totalStockAmount: 0,  // Default to 0 if error
-              totalPaid: 0,         // Default to 0 if error
-              pendingAmount: 0,      // Default to 0 if error
+              totalStockAmount: 0,
+              totalPaid: 0,
+              pendingAmount: 0,
             };
           }
         })
       );
 
-      // Store calculated pending amounts in state
       setAgentPendingAmounts(pendingAmounts);
       
-      // ============================================
-      // Step 3: Calculate Total Pending Across All Agents
-      // ============================================
-      // Sum all pending amounts from all agents
       const totalPending = pendingAmounts.reduce((sum, a) => sum + (a.pendingAmount || 0), 0);
       
-      // Update stats with total pending amount
       setStats(prev => ({
         ...prev,
-        totalPending, // Update total pending in stats
+        totalPending,
       }));
     } catch (err) {
-      // If error occurs, log it and show error message to user
       console.error("Error fetching agent pending amounts:", err);
       toast.error("Failed to fetch pending amounts");
     }
   };
 
-  // ============================================
-  // USE EFFECT: Filter Payments Based on Search and Method
-  // ============================================
-  // This effect runs whenever search text, method filter, or payments data changes
-  // It filters the payments list based on user's search and filter selections
   useEffect(() => {
-    // Start with all payments
     let filtered = agentPayments;
 
-    // ============================================
-    // Apply Search Filter
-    // ============================================
-    // If user has entered search text, filter payments
     if (search) {
       filtered = filtered.filter((payment) => {
-        // Get agent name from payment object (handle different formats)
         const agentName = payment.agent?.agentname || payment.agent?.username || "";
-        
-        // Get transaction ID from payment
         const transactionId = payment.transactionID || "";
-        
-        // Convert search text to lowercase for case-insensitive search
         const searchLower = search.toLowerCase();
         
-        // Return true if agent name OR transaction ID contains search text
         return (
           agentName.toLowerCase().includes(searchLower) ||
           transactionId.toLowerCase().includes(searchLower)
@@ -393,28 +246,18 @@ export default function AdminPayments() {
       });
     }
 
-    // ============================================
-    // Apply Payment Method Filter
-    // ============================================
-    // If user selected a specific payment method (not "all")
     if (methodFilter !== "all") {
       filtered = filtered.filter((payment) => {
-        // If filter is "online", include both "razorpay" and "online" methods
         if (methodFilter === "online") {
           return payment.method === "razorpay" || payment.method === "online";
         }
-        // Otherwise, match exact method (e.g., "cash")
         return payment.method === methodFilter;
       });
     }
 
-    // Update filtered payments state - this triggers UI update
     setFilteredPayments(filtered);
-  }, [search, methodFilter, agentPayments]); // Re-run when these values change
+  }, [search, methodFilter, agentPayments]);
 
-  // ============================================
-  // FUNCTION: Handle Cash Paid Update
-  // ============================================
   const handleUpdateCashPaid = async () => {
     if (!selectedPayment) return;
 
@@ -442,7 +285,6 @@ export default function AdminPayments() {
       setCashPaymentDialogOpen(false);
       setSelectedPayment(null);
       setCashPaidAmount("");
-      // Refresh both payments and pending amounts after a short delay
       setTimeout(async () => {
         await fetchAgentPayments();
         await fetchAgentPendingAmounts();
@@ -455,24 +297,17 @@ export default function AdminPayments() {
     }
   };
 
-  // ============================================
-  // FUNCTION: Format Date for Display
-  // ============================================
-  // Converts date string to readable format like "Jan 15, 2024, 10:30 AM"
   const formatDate = (dateString) => {
-    // If no date provided, return "N/A"
     if (!dateString) return "N/A";
     
-    // Convert string to Date object
     const date = new Date(dateString);
     
-    // Format date using locale-specific formatting
     return date.toLocaleDateString("en-US", {
-      year: "numeric",    // Show full year (2024)
-      month: "short",     // Show abbreviated month (Jan)
-      day: "numeric",     // Show day number (15)
-      hour: "2-digit",    // Show hour in 12-hour format (10)
-      minute: "2-digit",  // Show minutes (30)
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 

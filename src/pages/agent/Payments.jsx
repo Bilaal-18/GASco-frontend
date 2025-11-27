@@ -240,6 +240,7 @@ export default function Payments() {
                         </TableCell>
                         <TableCell>{payment.customer?.phoneNo || "N/A"}</TableCell>
                         <TableCell>{getCylinderName(payment)}</TableCell>
+                        
                         <TableCell>{payment.booking?.quantity || payment.quantity || 0}</TableCell>
                         <TableCell>₹{payment.amount?.toLocaleString() || 0}</TableCell>
                         <TableCell>

@@ -1,6 +1,6 @@
 import axios from "@/config/config";
 
-export const getAgentForecast = async (agentId, horizon = 14) => {
+export const getAgentForecast = async (agentId, horizon = 14, refresh = false) => {
   try {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -9,7 +9,8 @@ export const getAgentForecast = async (agentId, horizon = 14) => {
 
     const response = await axios.get(`/api/agents/${agentId}/forecast`, {
       params: {
-        horizon: horizon
+        horizon: horizon,
+        refresh: refresh
       },
       headers: {
         Authorization: token

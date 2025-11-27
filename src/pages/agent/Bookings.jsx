@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,35 +44,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import CustomDatePicker from "@/components/ui/DatePicker";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
-
-function MapBounds({ center, zoom }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center && center[0] && center[1]) {
-      map.setView(center, zoom || 13);
-    }
-  }, [center, zoom, map]);
-  return null;
-}
 
 
 export default function Bookings() {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedBooking, setSelectedBooking] = useState(null);
-  const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState(new Date()); 
@@ -188,7 +168,7 @@ export default function Bookings() {
         errorMessage = "Authentication failed. Please login again.";
         localStorage.removeItem("token");
       } else if (err?.response?.status === 403) {
-        errorMessage = "You don't have permission to access this resource.";
+        errorMessage = "Access denied.";
       } else if (err?.response?.data?.error) {
         errorMessage = err.response.data.error;
       } else if (err?.response?.data?.message) {
@@ -259,8 +239,7 @@ export default function Bookings() {
   }, [search, statusFilter, paymentFilter, selectedDate, bookings]);
 
   const handleViewMap = (booking) => {
-    setSelectedBooking(booking);
-    setMapDialogOpen(true);
+    navigate(`/agent/bookings/map/${booking._id}`);
   };
 
   const handleUpdateBooking = async (bookingId, updates) => {
@@ -699,7 +678,6 @@ export default function Bookings() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="confirmed">Co</SelectItem>
                                 <SelectItem value="delivered">Delivered</SelectItem>
                                 <SelectItem value="cancelled">Cancelled</SelectItem>
                               </SelectContent>
@@ -770,7 +748,7 @@ export default function Bookings() {
                 </select>
                 {customers.length === 0 && (
                   <p className="text-sm text-yellow-600 mt-1">
-                    No customers assigned to you. Please contact admin to assign customers.
+                    No customers assigned.
                   </p>
                 )}
               </div>
@@ -792,7 +770,7 @@ export default function Bookings() {
                   ) : (
                     availableStocks.map((stock) => (
                       <option key={stock.cylinderId._id} value={stock.cylinderId._id}>
-                        {stock.cylinderId.cylinderType} - Available: {stock.quantity} - ₹{stock.cylinderId.price}/unit
+                        {stock.cylinderId.cylinderName} - {stock.cylinderId.cylinderType} - Available: {stock.quantity} - ₹{stock.cylinderId.price}/unit
                       </option>
                     ))
                   )}
@@ -898,79 +876,6 @@ export default function Bookings() {
                 </Button>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-
-  
-        <Dialog open={mapDialogOpen} onOpenChange={setMapDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                Customer Location & Directions
-              </DialogTitle>
-            </DialogHeader>
-            {selectedBooking && selectedBooking.customer?.location?.coordinates && (
-              <div className="mt-4">
-                <div className="mb-4 text-sm text-gray-600">
-                  <p>
-                    <strong>Customer:</strong> {selectedBooking.customer?.username || selectedBooking.customer?.businessName}
-                  </p>
-                  <p>
-                    <strong>Address:</strong> {formatAddress(selectedBooking.customer?.address)}
-                  </p>
-                </div>
-                <div className="h-[500px] w-full rounded-lg overflow-hidden border">
-                  <MapContainer
-                    center={[
-                      selectedBooking.customer.location.coordinates[1],
-                      selectedBooking.customer.location.coordinates[0],
-                    ]}
-                    zoom={13}
-                    style={{ height: "100%", width: "100%" }}
-                  >
-                    <TileLayer
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    />
-                    <MapBounds
-                      center={[
-                        selectedBooking.customer.location.coordinates[1],
-                        selectedBooking.customer.location.coordinates[0],
-                      ]}
-                      zoom={13}
-                    />
-                    <Marker
-                      position={[
-                        selectedBooking.customer.location.coordinates[1],
-                        selectedBooking.customer.location.coordinates[0],
-                      ]}
-                    >
-                      <Popup>
-                        <div>
-                          <strong>{selectedBooking.customer?.username || selectedBooking.customer?.businessName}</strong>
-                          <p className="text-sm text-gray-600">{formatAddress(selectedBooking.customer?.address)}</p>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  </MapContainer>
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      const lat = selectedBooking.customer.location.coordinates[1];
-                      const lon = selectedBooking.customer.location.coordinates[0];
-                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`, "_blank");
-                    }}
-                    className="flex-1"
-                  >
-                    <Navigation className="w-4 h-4 mr-2" />
-                    Open in Google Maps
-                  </Button>
-                </div>
-              </div>
-            )}
           </DialogContent>
         </Dialog>
         </div>

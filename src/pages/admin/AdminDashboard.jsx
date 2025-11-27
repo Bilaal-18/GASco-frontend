@@ -275,10 +275,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate("/admin/payments")}
-          >
+          <Card >
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <Wallet className="h-4 w-4"/>
@@ -289,10 +286,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate("/admin/payments")}
-          >
+          <Card>
             <CardContent className="p-4">
               <div className="text-sm">Pending Amount</div>
               <div className="text-2xl font-bold">₹{summary.pendingAmount.toLocaleString()}</div>

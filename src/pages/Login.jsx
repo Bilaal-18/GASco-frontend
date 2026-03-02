@@ -9,10 +9,20 @@ import Navbar from "../components/Navbar";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import userContext from "@/context/UserContext";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
+
+const DEMO_USERS = [
+  { role: "Agent", email: "demo.agent@gasco.com", password: "Demo@1234", icon: "🚚", description: "Manage bookings & stock" },
+  { role: "Customer", email: "demo.customer@gasco.com", password: "Demo@1234", icon: "👤", description: "Order & track cylinders" },
+];
 
 export default function Login(props) {
-  const { handleLogin }= useContext(userContext)
+  const { handleLogin } = useContext(userContext)
+
+  const handleDemoLogin = (demo) => {
+    toast.info(`Logging in as ${demo.role}…`);
+    setTimeout(() => handleLogin({ email: demo.email, password: demo.password }, () => { }), 200);
+  };
   const formik = useFormik({
     initialValues: {
       email: "",
@@ -23,7 +33,7 @@ export default function Login(props) {
       password: Yup.string().required("Password is required"),
     }),
     onSubmit: async (values, { resetForm }) => {
-        await handleLogin(values,resetForm)
+      await handleLogin(values, resetForm)
     },
   });
 
@@ -32,7 +42,7 @@ export default function Login(props) {
       <Navbar />
       <Toaster richColors position="top-right" />
 
-      <main className="flex-1 flex justify-center items-center p-6">
+      <main className="flex-1 flex flex-row flex-wrap justify-center items-center p-6 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -48,7 +58,7 @@ export default function Login(props) {
 
             <CardContent>
               <form onSubmit={formik.handleSubmit} className="space-y-4">
-                
+
                 <div>
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -65,7 +75,7 @@ export default function Login(props) {
                   )}
                 </div>
 
-                
+
                 <div>
                   <Label htmlFor="password">Password</Label>
                   <Input
@@ -82,7 +92,7 @@ export default function Login(props) {
                   )}
                 </div>
 
-                
+
                 <div className="flex justify-between items-center pt-4">
                   <Link to="/">
                     <Button variant="outline" className="rounded-xl">
@@ -110,6 +120,47 @@ export default function Login(props) {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* ── Demo Login Panel ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.15 }}
+          className="w-full max-w-md"
+        >
+          <Card className="shadow-md border-slate-200 dark:border-slate-800 dark:bg-slate-900">
+            <CardHeader className="text-center pb-2">
+              <span className="text-xs font-semibold tracking-widest uppercase text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 rounded-full px-3 py-0.5">
+                🎯 Demo Access
+              </span>
+              <CardTitle className="text-base font-semibold text-slate-700 dark:text-slate-300 mt-2">
+                Try a Demo Account
+              </CardTitle>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Click any role to log in instantly
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-2 pt-0">
+              {DEMO_USERS.map((demo) => (
+                <Button
+                  key={demo.role}
+                  variant="outline"
+                  onClick={() => handleDemoLogin(demo)}
+                  className="w-full flex items-center gap-3 h-auto px-4 py-3 rounded-xl justify-start text-left"
+                >
+                  <span className="text-xl">{demo.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{demo.role}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">{demo.description}</p>
+                  </div>
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 truncate max-w-[140px] hidden sm:block">{demo.email}</span>
+                  <span className="text-slate-400">→</span>
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+        </motion.div>
+
       </main>
     </div>
   );
